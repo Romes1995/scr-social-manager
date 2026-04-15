@@ -1,0 +1,197 @@
+.score-live-page { }
+
+.score-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Sidebar matchs */
+.match-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.match-item {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--bordure);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+.match-item:last-child { border-bottom: none; }
+.match-item:hover { background: #f9fafb; }
+.match-item.selected { background: rgba(26,107,60,0.06); border-left: 3px solid var(--vert); }
+.match-item.en_cours { border-left: 3px solid #f59e0b; }
+
+.match-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.match-item-teams {
+  font-size: 14px;
+  color: var(--texte);
+  margin-bottom: 2px;
+}
+
+.match-item-info {
+  font-size: 12px;
+  color: var(--texte-gris);
+}
+
+.match-item-score {
+  margin-top: 6px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  color: var(--vert);
+  letter-spacing: 2px;
+}
+
+/* Scoreboard */
+.scoreboard {
+  background: linear-gradient(135deg, var(--vert-dark) 0%, var(--vert) 100%) !important;
+  color: white;
+  border: none !important;
+}
+
+.scoreboard-header {
+  padding: 16px 24px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scoreboard-teams {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 32px 24px;
+  gap: 16px;
+}
+
+.team-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.team-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 0.1em;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.team-score {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 80px;
+  line-height: 1;
+  letter-spacing: -2px;
+  color: var(--jaune);
+  text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.score-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.score-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.score-btn:hover:not(:disabled) { background: rgba(255,255,255,0.25); border-color: rgba(255,255,255,0.6); }
+.score-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.score-btn.plus { background: rgba(240,192,48,0.3); border-color: var(--jaune); }
+.score-btn.plus:hover:not(:disabled) { background: var(--jaune); color: var(--texte); }
+.score-btn.minus { background: rgba(220,38,38,0.2); border-color: rgba(220,38,38,0.5); }
+
+.score-separator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+.score-separator span {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  opacity: 0.5;
+}
+
+.live-indicator {
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  animation: pulseDot 1s infinite;
+}
+
+.scoreboard-actions {
+  padding: 0 24px 24px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Buteurs */
+.buteur-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.buteur-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bordure);
+  font-size: 14px;
+}
+.buteur-item:last-child { border-bottom: none; }
+
+.joueur-picker {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.w-full { width: 100%; }
+
+@media (max-width: 768px) {
+  .score-layout {
+    grid-template-columns: 1fr;
+  }
+  .team-score { font-size: 56px; }
+  .team-name { font-size: 16px; }
+}
