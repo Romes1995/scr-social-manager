@@ -4,169 +4,164 @@ Outil de gestion des réseaux sociaux pour le **SC Roeschwoog**, club de footbal
 
 ## Fonctionnalités
 
-- **Import FFF** : Scraping des matchs depuis epreuves.fff.fr
-- **Programme** : CRUD des matchs à venir avec publication réseaux sociaux
-- **Score Live** : Mise à jour en temps réel du score + gestion buteurs
-- **Résultats** : Historique et bilan de saison
-- **Templates** : Upload d'images + définition de zones de texte + génération
-- **Listes** : Clubs adversaires & joueurs SCR
-- **Publication Meta** : Préparé pour Facebook & Instagram (mock en beta)
+- **Programme** : Import FFF, CRUD des matchs, regroupement par week-end, déduplication
+- **Score Live** : Score en temps réel, gestion buteurs, stories automatiques (0-0, buts, fin de match)
+- **Résultats** : Historique et bilan de saison, génération de visuels
+- **Effectif** : Trombinoscope des joueurs (photos, catégories, âges)
+- **Listes** : Clubs adversaires & logos, modèles visuels
+- **Publication Meta** : Facebook & Instagram (posts + stories via Graph API v19.0)
 
 ## Stack technique
 
 | Couche | Technologie |
 |--------|-------------|
-| Backend | Node.js + Express |
-| Base de données | PostgreSQL |
-| Frontend | React + Vite |
-| Image | Sharp |
+| Backend | Node.js 20 + Express |
+| Base de données | PostgreSQL 14+ |
+| Frontend | React 18 + Vite |
+| Génération d'images | Sharp + Bebas Neue |
 | Upload | Multer |
+| Process manager | PM2 |
 
 ---
 
-## Installation
+## Prérequis
 
-### Prérequis
+- Ubuntu 22.04 LTS (ou 20.04 LTS)
+- Node.js 20+ — installé automatiquement
+- PostgreSQL 14+ — installé automatiquement
+- Git, curl — pré-installés sur Ubuntu
 
-- Node.js >= 18
-- PostgreSQL >= 14
-- npm >= 9
+---
 
-### 1. Cloner le projet
+## Installation en une commande
 
 ```bash
-git clone <url>
+git clone https://github.com/Romes1995/scr-social-manager.git
 cd scr-social-manager
+bash install.sh
 ```
 
-### 2. Base de données PostgreSQL
+Le script `install.sh` automatise :
 
-```bash
-# Créer la base de données
-psql -U postgres -c "CREATE DATABASE scr_social_manager;"
+1. Mise à jour apt
+2. Installation Node.js 20 via NodeSource
+3. Installation PostgreSQL
+4. Création de la base `scr_social_manager` avec un utilisateur dédié
+5. Import du schéma SQL
+6. Configuration du `backend/.env` depuis `.env.example`
+7. Installation des dépendances npm (backend + frontend)
+8. Build du frontend (Vite → `frontend/dist/`)
+9. Installation de PM2 + `serve`
+10. Lancement de l'app avec PM2 + démarrage automatique au boot
 
-# Créer les tables
-psql -U postgres -d scr_social_manager -f backend/database/schema.sql
+À la fin de l'installation, le script affiche :
 
-# Injecter les données initiales
-psql -U postgres -d scr_social_manager -f backend/database/seed.sql
 ```
-
-### 3. Backend
-
-```bash
-cd backend
-
-# Copier et configurer les variables d'environnement
-cp .env.example .env
-# Éditer .env avec vos paramètres PostgreSQL
-
-# Installer les dépendances
-npm install
-
-# Démarrer en mode développement
-npm run dev
-
-# Démarrer en production
-npm start
+╔══════════════════════════════════════════════════════════════════╗
+║   ✅  SCR Social Manager installé avec succès !                  ║
+╠══════════════════════════════════════════════════════════════════╣
+║   Backend API  : http://X.X.X.X:3001                            ║
+║   Frontend     : http://X.X.X.X:8080                            ║
+║   Base de données : scr_social_manager / scr_user / <mdp>       ║
+╚══════════════════════════════════════════════════════════════════╝
 ```
-
-Le backend démarre sur http://localhost:3001
-
-### 4. Frontend
-
-```bash
-cd frontend
-
-# Copier et configurer
-cp .env.example .env
-
-# Installer les dépendances
-npm install
-
-# Démarrer en développement
-npm run dev
-
-# Build production
-npm run build
-```
-
-Le frontend démarre sur http://localhost:5173
 
 ---
 
-## Variables d'environnement
+## Configuration du .env
 
-### Backend (`backend/.env`)
+Après installation, éditer `backend/.env` pour configurer les tokens Meta :
 
 ```env
 PORT=3001
+
+# PostgreSQL (rempli automatiquement par install.sh)
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=scr_social_manager
-DB_USER=postgres
-DB_PASSWORD=yourpassword
-UPLOADS_DIR=./uploads
-FFF_URL=https://epreuves.fff.fr/competition/club/504189-s-c-roeschwoog/information.html
-FRONTEND_URL=http://localhost:5173
+DB_USER=scr_user
+DB_PASSWORD=<généré automatiquement>
 
-# Meta (optionnel, pour la v1)
+# URL publique pour les uploads (ngrok ou domaine)
+# Requis pour que les publications Meta fonctionnent
+PUBLIC_URL=https://votre-domaine.fr
+
+# Meta / Facebook & Instagram (voir GUIDE_META_API.md)
 META_APP_ID=
-META_APP_SECRET=
-META_ACCESS_TOKEN=
 FACEBOOK_PAGE_ID=
-INSTAGRAM_ACCOUNT_ID=
+FACEBOOK_PAGE_ACCESS_TOKEN=
+INSTAGRAM_BUSINESS_ACCOUNT_ID=
+
+# CORS
+FRONTEND_URL=http://X.X.X.X:8080
 ```
 
-### Frontend (`frontend/.env`)
-
-```env
-VITE_API_URL=http://localhost:3001/api
-```
+> Voir **GUIDE_META_API.md** pour obtenir les tokens Facebook et Instagram.
 
 ---
 
-## API Endpoints
+## Mise à jour
+
+```bash
+bash update.sh
+```
+
+Le script `update.sh` :
+1. `git pull origin main`
+2. `npm install` dans `backend/`
+3. `npm install && npm run build` dans `frontend/`
+4. Applique les migrations schema (idempotent)
+5. `pm2 restart all`
+
+---
+
+## Accès
+
+| Service | URL |
+|---------|-----|
+| Frontend | `http://IP_SERVEUR:8080` |
+| Backend API | `http://IP_SERVEUR:3001` |
+| Logs | `pm2 logs scr-backend` |
+| Statut | `pm2 status` |
+
+---
+
+## API Endpoints principaux
 
 ### Matchs
 ```
-GET    /api/matches              Liste des matchs (filtres: statut, equipe)
-POST   /api/matches              Créer un match
-GET    /api/matches/:id          Détail d'un match
-PUT    /api/matches/:id          Modifier un match
-DELETE /api/matches/:id          Supprimer un match
-PATCH  /api/matches/:id/score    Mise à jour score live
-POST   /api/matches/:id/fin      Terminer un match
-POST   /api/matches/:id/start    Démarrer un match
+GET    /api/matches                 Liste (filtres: statut, equipe)
+POST   /api/matches                 Créer (avec déduplication)
+PUT    /api/matches/:id             Modifier
+DELETE /api/matches/:id             Supprimer
+PATCH  /api/matches/:id/score       Score live
+POST   /api/matches/:id/start       Démarrer
+POST   /api/matches/:id/fin         Terminer
+POST   /api/matches/:id/reset       Réinitialiser (0-0, programmé)
 ```
 
-### FFF
+### Templates & Génération d'images
 ```
-GET  /api/fff/import    Scraper les matchs depuis epreuves.fff.fr
-POST /api/fff/save      Sauvegarder des matchs importés
+POST /api/templates/generate-programme       Visuels programme (1–4 matchs)
+POST /api/templates/generate-score-live      Story score live
+POST /api/templates/generate-fin-match       Story fin de match
+POST /api/templates/generate-resultats       Visuels résultats
+POST /api/templates/score-live/:num          Upload template score live
+POST /api/templates/resultat/:num            Upload template résultats
+```
+
+### Publication Meta
+```
+POST /api/publish/facebook      Post ou story Facebook
+POST /api/publish/instagram     Post ou story Instagram
+POST /api/publish/both          Les deux simultanément
 ```
 
 ### Clubs & Joueurs
 ```
-GET/POST        /api/clubs
-GET/PUT/DELETE  /api/clubs/:id
-GET/POST        /api/joueurs
-GET/PUT/DELETE  /api/joueurs/:id
-```
-
-### Templates
-```
-GET/POST              /api/templates
-GET/PUT/DELETE        /api/templates/:id
-POST                  /api/templates/:id/generer
-```
-
-### Publication (mock beta)
-```
-POST /api/publish/facebook
-POST /api/publish/instagram
-POST /api/publish/both
-GET  /api/publish/programmes
+POST /api/clubs/scr-logo                Upload logo SCR couleur
+POST /api/clubs/scr-logo-monochrome     Upload logo SCR monochrome
+GET  /api/joueurs                       Liste avec ddn, categorie, photo
 ```
 
 ---
@@ -175,44 +170,58 @@ GET  /api/publish/programmes
 
 ```
 scr-social-manager/
+├── install.sh                   # Installation automatique Ubuntu
+├── update.sh                    # Mise à jour
+├── requirements.txt             # Prérequis système
+├── GUIDE_META_API.md            # Guide tokens Facebook/Instagram
 ├── backend/
 │   ├── database/
-│   │   ├── schema.sql          # Schéma PostgreSQL
-│   │   └── seed.sql            # Données initiales
-│   ├── routes/
-│   │   ├── fff.js              # Import FFF
-│   │   ├── matches.js          # CRUD matchs + score live
-│   │   ├── clubs.js            # CRUD clubs
-│   │   ├── joueurs.js          # CRUD joueurs
-│   │   ├── templates.js        # Gestion templates + génération image
-│   │   └── publish.js          # Publication Meta (mock)
-│   ├── uploads/                # Fichiers uploadés
-│   ├── db.js                   # Connexion PostgreSQL
-│   ├── index.js                # Serveur Express
+│   │   ├── schema.sql           # Schéma PostgreSQL (à jour)
+│   │   └── seed.sql             # Données initiales (clubs)
+│   ├── routes/                  # API Express
+│   ├── utils/
+│   │   ├── imageGenerator.js    # Génération visuels Sharp
+│   │   └── ensureClub.js        # Auto-création clubs adversaires
+│   ├── fonts/
+│   │   └── BebasNeue-Regular.ttf
+│   ├── uploads/                 # Logos, templates, images générées
+│   ├── scripts/                 # Scripts test et utilitaires
+│   ├── db.js
+│   ├── index.js
 │   └── .env.example
 ├── frontend/
 │   └── src/
 │       ├── pages/
-│       │   ├── Programme.jsx   # Gestion matchs à venir
-│       │   ├── ScoreLive.jsx   # Score en temps réel
-│       │   ├── Resultats.jsx   # Historique résultats
-│       │   ├── Templates.jsx   # Gestion templates
-│       │   └── Listes.jsx      # Clubs & joueurs
-│       ├── components/
-│       │   └── Header.jsx
+│       │   ├── Programme.jsx    # Matchs à venir
+│       │   ├── ScoreLive.jsx    # Score en temps réel
+│       │   ├── Resultats.jsx    # Résultats
+│       │   ├── Effectif.jsx     # Trombinoscope joueurs
+│       │   ├── Listes.jsx       # Clubs, logos, modèles
+│       │   └── Templates.jsx    # Gestion templates
 │       ├── services/
-│       │   └── api.js          # Appels API centralisés
+│       │   └── api.js           # URL dynamique (hostname)
 │       └── App.jsx
-└── README.md
+└── scripts/
+    ├── start-mobile.sh          # Tunnel ngrok pour accès mobile
+    └── start-tunnel.sh
 ```
 
 ---
 
-## Notes beta
+## Développement local
 
-- La publication Facebook/Instagram retourne un **mock** (pas de vraie connexion à l'API Meta)
-- Le scraping FFF peut être limité si le site utilise du JavaScript côté client
-- Pour activer Meta : configurer les variables `META_*` dans `.env` et implémenter `routes/publish.js`
+```bash
+# Backend
+cd backend && npm run dev      # http://localhost:3001
+
+# Frontend
+cd frontend && npm run dev     # http://localhost:5173
+
+# Accès mobile (même réseau Wi-Fi)
+bash scripts/start-mobile.sh  # Tunnel ngrok backend + frontend réseau local
+```
+
+---
 
 ## Crédits
 

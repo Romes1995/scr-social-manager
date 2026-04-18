@@ -5,6 +5,7 @@ import ScoreLive from './pages/ScoreLive';
 import Resultats from './pages/Resultats';
 import Templates from './pages/Templates';
 import Listes from './pages/Listes';
+import Effectif from './pages/Effectif';
 import './App.css';
 
 const TABS = [
@@ -12,7 +13,8 @@ const TABS = [
   { id: 'score_live', label: 'Score Live', icon: '⚡' },
   { id: 'resultats', label: 'Résultats', icon: '🏆' },
   { id: 'templates', label: 'Templates', icon: '🎨' },
-  { id: 'listes', label: 'Listes', icon: '📋' },
+  { id: 'listes',   label: 'Listes',   icon: '📋' },
+  { id: 'effectif', label: 'Effectif', icon: '👥' },
 ];
 
 export default function App() {
@@ -24,7 +26,8 @@ export default function App() {
       case 'score_live': return <ScoreLive />;
       case 'resultats': return <Resultats />;
       case 'templates': return <Templates />;
-      case 'listes': return <Listes />;
+      case 'listes':   return <Listes />;
+      case 'effectif': return <Effectif />;
       default: return <Programme />;
     }
   };

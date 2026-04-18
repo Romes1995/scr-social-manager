@@ -1,0 +1,188 @@
+/* ── Filtres ────────────────────────────────────────────────────────────────── */
+
+.effectif-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.effectif-categories {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.effectif-cat-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--bordure);
+  background: var(--fond-card);
+  color: var(--texte-gris);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.effectif-cat-btn:hover { border-color: var(--vert); color: var(--vert); }
+.effectif-cat-btn.active {
+  background: var(--vert);
+  border-color: var(--vert);
+  color: #fff;
+}
+.effectif-cat-btn.active .effectif-cat-count { background: rgba(255,255,255,0.25); color: #fff; }
+
+.effectif-cat-count {
+  background: var(--fond);
+  color: var(--texte-gris);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}
+
+.effectif-search {
+  flex: 1;
+  min-width: 180px;
+  max-width: 280px;
+  padding: 8px 14px;
+  border: 1.5px solid var(--bordure);
+  border-radius: 20px;
+  font-size: 14px;
+  background: var(--fond-card);
+  color: var(--texte);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.effectif-search:focus { border-color: var(--vert); }
+
+.effectif-count {
+  font-size: 13px;
+  color: var(--texte-gris);
+  margin-bottom: 14px;
+}
+
+/* ── Grille ─────────────────────────────────────────────────────────────────── */
+
+.player-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 16px;
+}
+
+/* ── Carte joueur ───────────────────────────────────────────────────────────── */
+
+.player-card {
+  background: var(--fond-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+  cursor: default;
+}
+.player-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Photo */
+.player-photo {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: var(--fond);
+  overflow: hidden;
+}
+.player-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.player-photo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+}
+.player-photo-placeholder span {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 42px;
+  color: #9ca3af;
+  letter-spacing: 2px;
+}
+
+.player-categorie-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+/* Infos texte */
+.player-info {
+  padding: 10px 10px 12px;
+  text-align: center;
+}
+.player-prenom {
+  font-size: 13px;
+  color: var(--texte-gris);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.player-nom {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  letter-spacing: 0.05em;
+  color: var(--texte);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.player-ddn {
+  font-size: 11px;
+  color: var(--texte-gris);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.player-age {
+  background: var(--fond);
+  border-radius: 8px;
+  padding: 1px 6px;
+  font-weight: 600;
+  color: var(--texte-gris);
+  font-size: 10px;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .player-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .effectif-filters { gap: 10px; }
+  .effectif-search { max-width: 100%; }
+}

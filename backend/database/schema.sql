@@ -3,7 +3,9 @@
 CREATE TABLE IF NOT EXISTS clubs (
   id SERIAL PRIMARY KEY,
   nom VARCHAR(100) NOT NULL,
+  equipe VARCHAR(50),
   logo_url TEXT,
+  logo_monochrome_url TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -11,6 +13,10 @@ CREATE TABLE IF NOT EXISTS joueurs (
   id SERIAL PRIMARY KEY,
   nom VARCHAR(50) NOT NULL,
   prenom VARCHAR(50) NOT NULL,
+  ddn DATE,
+  categorie VARCHAR(30),
+  photo VARCHAR(255),
+  video_celebration_url TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -55,7 +61,7 @@ CREATE TABLE IF NOT EXISTS publications_programmees (
 );
 
 -- Index pour les performances
-CREATE INDEX IF NOT EXISTS idx_matches_date ON matches(date);
-CREATE INDEX IF NOT EXISTS idx_matches_statut ON matches(statut);
-CREATE INDEX IF NOT EXISTS idx_matches_equipe ON matches(equipe);
+CREATE INDEX IF NOT EXISTS idx_matches_date    ON matches(date);
+CREATE INDEX IF NOT EXISTS idx_matches_statut  ON matches(statut);
+CREATE INDEX IF NOT EXISTS idx_matches_equipe  ON matches(equipe);
 CREATE INDEX IF NOT EXISTS idx_publications_match ON publications_programmees(match_id);

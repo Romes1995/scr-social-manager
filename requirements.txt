@@ -1,0 +1,26 @@
+# SCR Social Manager — Prérequis système
+
+## Système d'exploitation
+- Ubuntu 22.04 LTS (ou 20.04 LTS)
+
+## Runtime
+- Node.js 20.x ou supérieur
+- npm 10.x ou supérieur (inclus avec Node.js 20)
+
+## Base de données
+- PostgreSQL 14 ou supérieur
+
+## Outils
+- Git 2.x
+- PM2 (installé automatiquement par install.sh via npm)
+- curl (pré-installé sur Ubuntu)
+
+## Ressources recommandées (VPS)
+- RAM : 1 Go minimum, 2 Go recommandé
+- Disque : 10 Go minimum
+- CPU : 1 vCPU minimum
+
+## Ports à ouvrir
+- 3001 (API backend)
+- 80 / 443 (frontend via reverse proxy nginx — optionnel)
+- 5432 (PostgreSQL — local uniquement, ne pas exposer)
