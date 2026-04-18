@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const { ensureAdversaireClub } = require('../utils/ensureClub');
 
 // GET /api/matches - Liste tous les matchs
 router.get('/', async (req, res) => {
@@ -57,6 +58,17 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'equipe et adversaire sont requis' });
     }
 
+    // Déduplication : même équipe + même adversaire + même date
+    if (date) {
+      const dup = await pool.query(
+        `SELECT id FROM matches WHERE LOWER(equipe)=LOWER($1) AND LOWER(adversaire)=LOWER($2) AND date=$3`,
+        [equipe, adversaire, date]
+      );
+      if (dup.rows.length > 0) {
+        return res.status(409).json({ error: 'Match déjà existant (même équipe, adversaire et date)', duplicate_id: dup.rows[0].id });
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO matches (equipe, adversaire, logo_adversaire, date, heure, lieu, domicile, division, statut)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -66,6 +78,9 @@ router.post('/', async (req, res) => {
     );
 
     const match = result.rows[0];
+
+    // Auto-créer le club adversaire en arrière-plan (non-bloquant)
+    ensureAdversaireClub(match.adversaire);
 
     // Si statut programme, créer une publication programmée à 00h01 le jour du match
     if (match.statut === 'programme' && match.date) {
@@ -106,6 +121,9 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Match non trouvé' });
     }
 
+    // Auto-créer le club adversaire en arrière-plan (non-bloquant)
+    ensureAdversaireClub(result.rows[0].adversaire);
+
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -138,7 +156,11 @@ router.patch('/:id/score', async (req, res) => {
     else if (action === 'decrement_scr') newScoreScr = Math.max(0, newScoreScr - 1);
     else if (action === 'increment_adv') newScoreAdv = Math.max(0, newScoreAdv + 1);
     else if (action === 'decrement_adv') newScoreAdv = Math.max(0, newScoreAdv - 1);
-    else if (action === 'add_buteur' && req.body.buteur) {
+    else if (action === 'goal_scr' && req.body.buteur) {
+      // But SCR : incrémente le score + ajoute le buteur en une seule requête
+      newScoreScr = Math.max(0, newScoreScr + 1);
+      newButeurs  = [...newButeurs, req.body.buteur];
+    } else if (action === 'add_buteur' && req.body.buteur) {
       newButeurs = [...newButeurs, req.body.buteur];
     } else if (action === 'remove_buteur' && req.body.buteur) {
       const idx = newButeurs.lastIndexOf(req.body.buteur);
@@ -202,6 +224,25 @@ router.post('/:id/start', async (req, res) => {
     }
 
     res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/matches/:id/reset - Réinitialiser un match (score 0-0, statut programmé, buteurs vides)
+router.post('/:id/reset', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE matches
+       SET score_scr=0, score_adv=0, buteurs='{}', statut='programme', updated_at=NOW()
+       WHERE id=$1
+       RETURNING *`,
+      [req.params.id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Match non trouvé' });
+    }
+    res.json({ success: true, match: result.rows[0] });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

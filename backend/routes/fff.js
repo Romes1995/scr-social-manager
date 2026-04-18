@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const pool = require('../db');
+const { ensureAdversaireClub } = require('../utils/ensureClub');
 
 const FFF_URL = process.env.FFF_URL || 'https://epreuves.fff.fr/competition/club/504189-s-c-roeschwoog/information.html';
 const FFF_CLCOD = '504189'; // Code club SCR Roeschwoog
@@ -196,11 +197,24 @@ router.post('/save', async (req, res) => {
     return res.status(400).json({ error: 'Liste de matchs vide ou invalide' });
   }
 
-  const saved = [];
-  const errors = [];
+  const saved    = [];
+  const skipped  = [];
+  const errors   = [];
 
   for (const match of matchs) {
     try {
+      // Déduplication : même équipe + adversaire + date
+      if (match.date) {
+        const dup = await pool.query(
+          `SELECT id FROM matches WHERE LOWER(equipe)=LOWER($1) AND LOWER(adversaire)=LOWER($2) AND date=$3`,
+          [match.equipe || 'SCR 1', match.adversaire, match.date]
+        );
+        if (dup.rows.length > 0) {
+          skipped.push({ adversaire: match.adversaire, date: match.date });
+          continue;
+        }
+      }
+
       const result = await pool.query(
         `INSERT INTO matches (equipe, adversaire, logo_adversaire, date, heure, domicile, division, statut)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'programme')
@@ -216,12 +230,14 @@ router.post('/save', async (req, res) => {
         ]
       );
       saved.push(result.rows[0]);
+      // Auto-créer le club adversaire en arrière-plan
+      ensureAdversaireClub(match.adversaire);
     } catch (err) {
       errors.push({ match: match.adversaire, error: err.message });
     }
   }
 
-  res.json({ success: true, saved: saved.length, errors });
+  res.json({ success: true, saved: saved.length, skipped: skipped.length, errors });
 });
 
 module.exports = router;
