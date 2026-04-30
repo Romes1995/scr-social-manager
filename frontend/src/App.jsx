@@ -5,7 +5,8 @@ import ScoreLive from './pages/ScoreLive';
 import Resultats from './pages/Resultats';
 import Templates from './pages/Templates';
 import Listes from './pages/Listes';
-import Effectif from './pages/Effectif';
+import MatchDay from './pages/MatchDay';
+import ConvocationPreparator from './pages/ConvocationPreparator';
 import './App.css';
 
 const TABS = [
@@ -14,7 +15,8 @@ const TABS = [
   { id: 'resultats', label: 'Résultats', icon: '🏆' },
   { id: 'templates', label: 'Templates', icon: '🎨' },
   { id: 'listes',   label: 'Listes',   icon: '📋' },
-  { id: 'effectif', label: 'Effectif', icon: '👥' },
+  { id: 'matchday',    label: 'Match Day',  icon: '🏟️' },
+  { id: 'convocation', label: 'Convocation', icon: '📨' },
 ];
 
 export default function App() {
@@ -27,7 +29,8 @@ export default function App() {
       case 'resultats': return <Resultats />;
       case 'templates': return <Templates />;
       case 'listes':   return <Listes />;
-      case 'effectif': return <Effectif />;
+      case 'matchday':    return <MatchDay />;
+      case 'convocation': return <ConvocationPreparator />;
       default: return <Programme />;
     }
   };

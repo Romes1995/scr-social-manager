@@ -1,0 +1,152 @@
+/* ── Filtre équipe ───────────────────────────────────────────────────────────── */
+
+.resultats-team-filter {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.resultats-team-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: 20px;
+  border: 1.5px solid var(--bordure);
+  background: var(--fond-card);
+  color: var(--texte-gris);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.resultats-team-btn:hover { border-color: var(--vert); color: var(--vert); }
+.resultats-team-btn.active {
+  background: var(--vert);
+  border-color: var(--vert);
+  color: #fff;
+}
+.resultats-team-btn.active .resultats-team-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+.resultats-team-count {
+  background: var(--fond);
+  color: var(--texte-gris);
+  border-radius: 10px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ── En-tête de section (Championnat / Coupe) ────────────────────────────────── */
+
+.resultats-section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Badges compétition ──────────────────────────────────────────────────────── */
+
+.competition-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.competition-badge--champ {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 14px;
+  padding: 4px 12px;
+}
+
+.competition-badge--coupe {
+  background: #ffedd5;
+  color: #c2410c;
+  font-size: 14px;
+  padding: 4px 12px;
+}
+
+/* ── Badge résultat V/N/D ────────────────────────────────────────────────────── */
+
+.result-badge {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+}
+.result-badge--win  { background: var(--vert-success-light); color: var(--vert-success); }
+.result-badge--loss { background: var(--rouge-light);        color: var(--rouge); }
+.result-badge--draw { background: #f3f4f6;                  color: var(--texte-gris); }
+
+/* ── Sous-onglets Phase SCR 3 ────────────────────────────────────────────────── */
+
+.scr3-phase-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.scr3-phase-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  border: 1.5px solid var(--bordure);
+  background: var(--fond-card);
+  color: var(--texte-gris);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+.scr3-phase-btn:hover { border-color: #9333ea; color: #9333ea; }
+.scr3-phase-btn.active {
+  background: #9333ea;
+  border-color: #9333ea;
+  color: #fff;
+}
+.scr3-phase-btn.active .resultats-team-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* ── Ligne de sélection visuel ───────────────────────────────────────────────── */
+
+.visuel-match-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--bordure);
+  background: var(--fond);
+  transition: border-color 0.15s, background 0.15s;
+}
+.visuel-match-row.selected {
+  border-color: var(--vert);
+  background: #f0f9f4;
+}
+.visuel-match-row:hover { border-color: var(--vert); }

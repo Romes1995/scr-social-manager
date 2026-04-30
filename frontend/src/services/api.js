@@ -28,6 +28,7 @@ export const updateScore = (id, data) => api.patch(`/matches/${id}/score`, data)
 export const finMatch = (id) => api.post(`/matches/${id}/fin`);
 export const startMatch = (id) => api.post(`/matches/${id}/start`);
 export const resetMatch = (id) => api.post(`/matches/${id}/reset`);
+export const generateMatchText = (matchIds) => api.post('/matches/generate-text', { match_ids: matchIds }, { timeout: 30000 });
 
 // --- FFF ---
 export const importFFF = () => api.get('/fff/import');
@@ -44,6 +45,9 @@ export const getJoueurs = () => api.get('/joueurs');
 export const createJoueur = (data) => api.post('/joueurs', data);
 export const updateJoueur = (id, data) => api.put(`/joueurs/${id}`, data);
 export const deleteJoueur = (id) => api.delete(`/joueurs/${id}`);
+export const uploadJoueurImages = (id, formData) => api.put(`/joueurs/${id}/images`, formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
 
 // --- Templates ---
 export const getTemplates = (params) => api.get('/templates', { params });
@@ -53,10 +57,14 @@ export const createTemplate = (formData) => api.post('/templates', formData, {
 export const updateTemplate = (id, data) => api.put(`/templates/${id}`, data);
 export const deleteTemplate = (id) => api.delete(`/templates/${id}`);
 export const genererImage = (id, valeurs) => api.post(`/templates/${id}/generer`, { valeurs });
+export const genererDynamique = (id, matchId, textesFixe = {}) =>
+  api.post(`/templates/${id}/generer-dynamique`, { matchId, textesFixe }, { timeout: 30000 });
 export const generateProgramme = (matchs) => api.post('/templates/generate-programme', { matchs }, { timeout: 30000 });
 export const generateScoreLive = (match_id) => api.post('/templates/generate-score-live', { match_id }, { timeout: 30000 });
 export const generateFinMatch = (match_id) => api.post('/templates/generate-fin-match', { match_id }, { timeout: 30000 });
 export const generateResultats = (matchs) => api.post('/templates/generate-resultats', { matchs }, { timeout: 30000 });
+export const generateMatchDay = (matchId, teamNumber) => api.post('/templates/generate-matchday', { matchId, teamNumber }, { timeout: 30000 });
+export const generateResultatWeekend = (matchIds) => api.post('/templates/generate-resultat-weekend', { matchIds }, { timeout: 30000 });
 export const getScoreLiveTemplateStatus = () => api.get('/templates/score-live/status');
 export const getResultatsTemplateStatus = () => api.get('/templates/resultats/status');
 export const uploadScoreLiveTemplate = (num, formData) => api.post(`/templates/score-live/${num}`, formData, {
@@ -94,6 +102,12 @@ export const uploadCelebrationVideo = (id, formData) => api.post(`/joueurs/${id}
 });
 
 export const API_BASE_URL = API_BASE.replace('/api', '');
+
+// --- Convocation ---
+export const getConvocationMatchesWeekend = () => api.get('/convocation/matches-weekend');
+export const getConvocationJoueurs = (equipe) => api.get(`/convocation/joueurs/${encodeURIComponent(equipe)}`);
+export const generateConvocation = (data) => api.post('/convocation/generate', data);
+export const generateConvocationVisual = (data) => api.post('/convocation/generate-visual', data, { timeout: 30000 });
 
 // --- Publish ---
 export const publishFacebook = (data) => api.post('/publish/facebook', data);

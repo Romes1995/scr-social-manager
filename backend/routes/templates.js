@@ -214,6 +214,23 @@ router.post('/:id/generer', async (req, res) => {
   }
 });
 
+// POST /api/templates/:id/generer-dynamique — génération avec données match
+router.post('/:id/generer-dynamique', async (req, res) => {
+  try {
+    const { matchId, textesFixe = {} } = req.body;
+    if (!matchId) return res.status(400).json({ error: 'matchId requis' });
+
+    const { generateFromTemplate } = require('../services/templateGenerator');
+    const imagePath = await generateFromTemplate(req.params.id, matchId, textesFixe);
+
+    const base = `http://localhost:${process.env.PORT || 3001}`;
+    res.json({ success: true, url: base + imagePath, path: imagePath });
+  } catch (err) {
+    console.error('[generer-dynamique]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // POST /api/templates/generate-programme
 // Body: { matchs: [{equipe, adversaire, logo_adversaire, date, heure, domicile}] }
 router.post('/generate-programme', async (req, res) => {
@@ -240,6 +257,31 @@ router.post('/generate-programme', async (req, res) => {
   } catch (err) {
     console.error('[generate-programme]', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/templates/generate-matchday
+// Body: { matchId, teamNumber }
+router.post('/generate-matchday', async (req, res) => {
+  try {
+    const { matchId, teamNumber } = req.body;
+
+    if (!matchId || !teamNumber) {
+      return res.status(400).json({ success: false, error: 'matchId et teamNumber sont requis' });
+    }
+
+    if (![1, 2, 3].includes(Number(teamNumber))) {
+      return res.status(400).json({ success: false, error: 'teamNumber doit être 1, 2 ou 3' });
+    }
+
+    const { generateMatchDay } = require('../utils/imageGenerator');
+    const imagePath = await generateMatchDay(matchId, Number(teamNumber));
+
+    const base = `http://localhost:${process.env.PORT || 3001}`;
+    res.json({ success: true, story: imagePath, story_url: base + imagePath });
+  } catch (err) {
+    console.error('[generate-matchday]', err.message);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 
@@ -351,6 +393,81 @@ router.post('/generate-resultats', async (req, res) => {
     res.json({ success: true, url, full_url: base + url, nb_matchs: matchs.length });
   } catch (err) {
     console.error('[generate-resultats]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/templates/generate-resultat-weekend
+// Body: { matchIds: [id, ...] }  — 1 à 3 IDs de matchs terminés
+router.post('/generate-resultat-weekend', async (req, res) => {
+  try {
+    const { matchIds } = req.body;
+    if (!Array.isArray(matchIds) || matchIds.length === 0 || matchIds.length > 3) {
+      return res.status(400).json({ error: '1 à 3 match IDs requis' });
+    }
+
+    const { generateResultat } = require('../services/generateResultat');
+    const BACKEND   = path.join(__dirname, '..');
+    const LOGOS_DIR = path.join(BACKEND, 'uploads', 'logos');
+    const LOGO_SCR  = path.join(LOGOS_DIR, 'scr.png');
+
+    // Charger les matchs depuis la DB (ordre par équipe SCR)
+    const { rows: matchesDB } = await pool.query(
+      'SELECT * FROM matches WHERE id = ANY($1::int[]) ORDER BY equipe ASC',
+      [matchIds]
+    );
+    if (matchesDB.length === 0) throw new Error('Aucun match trouvé pour ces IDs');
+
+    // Construire le tableau matches pour generateResultat
+    const matches = await Promise.all(matchesDB.map(async (m) => {
+      // Rechercher logo adversaire dans la table clubs (correspondance partielle sur le nom)
+      const advWords = (m.adversaire || '').split(/\s+/);
+      let advLogoPath = null;
+      for (const word of advWords) {
+        if (word.length < 3) continue;
+        const { rows } = await pool.query(
+          "SELECT logo_url FROM clubs WHERE LOWER(nom) LIKE LOWER($1) AND logo_url IS NOT NULL LIMIT 1",
+          [`%${word}%`]
+        );
+        if (rows[0]?.logo_url) {
+          advLogoPath = path.join(BACKEND, rows[0].logo_url);
+          break;
+        }
+      }
+
+      // domicile=true → SCR à gauche ; domicile=false → SCR à droite
+      const scrOnLeft = m.domicile !== false;
+      const scrLogo   = fs.existsSync(LOGO_SCR) ? LOGO_SCR : null;
+      const scrNom    = (m.equipe     || 'SCR').toUpperCase();
+      const advNom    = (m.adversaire || '').toUpperCase();
+      const score     = scrOnLeft
+        ? `${m.score_scr ?? 0} - ${m.score_adv ?? 0}`
+        : `${m.score_adv ?? 0} - ${m.score_scr ?? 0}`;
+
+      // Formatage buteurs : "Nom Prénom [count]" (parse dans scorersNodes via regex)
+      const buteursRaw = m.buteurs || [];
+      const goalCount  = {};
+      for (const b of buteursRaw) goalCount[b] = (goalCount[b] || 0) + 1;
+      const scorers = Object.entries(goalCount)
+        .map(([name, count]) => count > 1 ? `${name} [${count}]` : name)
+        .join('\n');
+
+      return {
+        logoGauche: scrOnLeft ? scrLogo    : advLogoPath,
+        nomGauche:  scrOnLeft ? scrNom     : advNom,
+        score,
+        nomDroite:  scrOnLeft ? advNom     : scrNom,
+        logoDroite: scrOnLeft ? advLogoPath : scrLogo,
+        scorers,
+        domicile:   scrOnLeft,
+      };
+    }));
+
+    const url  = await generateResultat({ matches });
+    const base = `http://localhost:${process.env.PORT || 3001}`;
+    res.json({ success: true, url, full_url: base + url });
+  } catch (err) {
+    console.error('[generate-resultat-weekend]', err.message);
     res.status(500).json({ error: err.message });
   }
 });

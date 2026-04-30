@@ -591,4 +591,152 @@ async function generateResultats(matchs) {
   return `/uploads/generated/resultats_${ts}.png`;
 }
 
-module.exports = { generateProgramme, generateScoreLive, generateResultats };
+// ─── GÉNÉRATION MATCHDAY ──────────────────────────────────────────────────────
+//
+// Template 1080×1920 (type='matchday' en base, id=9 "Matchday Vierge")
+// Logo domicile : left=130, top=680, 220×220px
+// Logo visiteur : left=730, top=680, 220×220px
+//
+// Textes (text-anchor="middle" — x = centre du texte) :
+//   Nom équipe SCR    : x=540,  y=100,  28px  #FFFFFF
+//   Nom domicile      : x=190,  y=1035, 36px  #000000  bold
+//   "VS"              : x=540,  y=1035, 36px  #000000  bold
+//   Nom visiteur      : x=890,  y=1035, 36px  #000000  bold
+//   Date DD.MM.YYYY   : x=540,  y=1200, 130px #FFE600  bold
+//   Heure XXH00       : x=540,  y=1430, 52px  #FFE600  normal
+//   Lieu              : x=540,  y=1490, 52px  #FFE600  bold
+
+/**
+ * @param {number|string} matchId    - ID du match en base
+ * @param {number}        teamNumber - Numéro d'équipe SCR (1, 2 ou 3)
+ */
+async function generateMatchDay(matchId, teamNumber = 1) {
+  if (!fs.existsSync(GENERATED)) fs.mkdirSync(GENERATED, { recursive: true });
+
+  // ── 1. Chargement du match ──────────────────────────────────────────────────
+  const r = await pool.query('SELECT * FROM matches WHERE id=$1', [matchId]);
+  if (r.rows.length === 0) throw new Error('Match non trouvé : id=' + matchId);
+  const match = r.rows[0];
+  console.log(`[matchDay] match : "${match.equipe}" vs "${match.adversaire}" | domicile=${match.domicile}`);
+
+  // ── 2. Template ─────────────────────────────────────────────────────────────
+  // Priorité 1 : template de type='matchday' enregistré en base
+  // Priorité 2 : fichier hardcodé (id=9, "Matchday Vierge")
+  let tpl = null;
+
+  try {
+    const dbRes = await pool.query(
+      `SELECT fichier FROM templates WHERE type = 'matchday' ORDER BY id DESC LIMIT 1`
+    );
+    if (dbRes.rows.length > 0) {
+      const dbPath = path.join(__dirname, '..', dbRes.rows[0].fichier);
+      if (fs.existsSync(dbPath)) {
+        tpl = dbPath;
+        console.log(`[matchDay] template DB : ${dbRes.rows[0].fichier}`);
+      } else {
+        console.warn(`[matchDay] fichier DB introuvable sur disque : ${dbPath}`);
+      }
+    }
+  } catch (dbErr) {
+    console.warn(`[matchDay] erreur requête template DB : ${dbErr.message}`);
+  }
+
+  // Fallback hardcodé
+  if (!tpl) {
+    tpl = path.join(UPLOADS, 'template_1776525499057.png');
+    console.log(`[matchDay] template fallback : ${tpl} — existe: ${fs.existsSync(tpl)}`);
+  }
+
+  if (!fs.existsSync(tpl)) throw new Error(`Template matchday introuvable : ${tpl}`);
+  const tplMeta = await sharp(tpl).metadata();
+  console.log(`[matchDay] template final — ${tplMeta.width}×${tplMeta.height}px`);
+
+  // ── 3. Logos ─────────────────────────────────────────────────────────────────
+  const logos     = await loadClubLogosFromDB();
+  const scrOnLeft = match.domicile !== false; // true = SCR est domicile (gauche)
+  const advNorm   = normalizeClubName(match.adversaire);
+  const advPath   = logos.color.get(advNorm) || logos.mono.get(advNorm) || null;
+  const scrPath   = fs.existsSync(LOGO_SCR) ? LOGO_SCR : null;
+  console.log(`[matchDay] logo SCR : ${scrPath || 'absent'} | logo adv ("${advNorm}") : ${advPath || 'aucun'}`);
+
+  const LOGO_SIZE = 220;
+
+  const domLogoPath = scrOnLeft ? scrPath : advPath;
+  const visLogoPath = scrOnLeft ? advPath : scrPath;
+
+  const domBuf = await loadLogoBuf(domLogoPath, LOGO_SIZE)
+              || await svgToPng(makeGreyDisc(LOGO_SIZE));
+  const visBuf = await loadLogoBuf(visLogoPath, LOGO_SIZE)
+              || await svgToPng(makeGreyDisc(LOGO_SIZE));
+
+  // ── 4. Formatage textes ───────────────────────────────────────────────────────
+  // Date → DD.MM.YYYY
+  let dateFmt = '';
+  if (match.date) {
+    const d  = new Date(match.date);
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    dateFmt = `${dd}.${mm}.${d.getFullYear()}`;
+  }
+
+  // Heure → XXH00
+  const heureFmt = match.heure
+    ? match.heure.slice(0, 5).replace(':', 'H')
+    : '';
+
+  // Noms équipes
+  const num = Math.min(Math.max(parseInt(teamNumber) || 1, 1), 3);
+  const scrLabel    = esc(`SC ROESCHWOOG EQUIPE ${num}`);
+  const scrNameShort = esc(`SCR ${num}`);
+
+  // Nom domicile / visiteur dans la bande blanche
+  const domNom = esc((scrOnLeft ? scrNameShort : String(match.adversaire || '').toUpperCase()));
+  const visNom = esc((scrOnLeft ? String(match.adversaire || '').toUpperCase() : scrNameShort));
+
+  const lieu = esc(
+    match.lieu && match.lieu.trim() !== ''
+      ? match.lieu.trim().toUpperCase()
+      : 'ROESCHWOOG'
+  );
+
+  console.log(`[matchDay] date="${dateFmt}" heure="${heureFmt}" dom="${domNom}" vis="${visNom}" lieu="${lieu}"`);
+
+  // ── 5. Couche texte SVG → PNG transparent ─────────────────────────────────────
+  const bebas = "'BebasNeue', Arial, Helvetica, sans-serif";
+
+  const svgContent =
+    `<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">` +
+    svgFontDefs() +
+    // Nom équipe SCR en haut
+    svgText(540,  68,   26,  '400',  '#FFFFFF', scrLabel, bebas) +
+    // Bande blanche : noms + VS — centres ramenés vers le milieu pour éviter les débordements
+    svgText(270,  1032, 32,  '700',  '#000000', domNom, bebas) +
+    svgText(540,  1032, 32,  '700',  '#000000', 'VS', bebas) +
+    svgText(810,  1032, 32,  '700',  '#000000', visNom, bebas) +
+    // Date grande — sous la bande blanche
+    svgText(540,  1230, 120, '700',  '#FFE600', esc(dateFmt), bebas) +
+    // Heure + lieu — espacés pour ne pas se chevaucher
+    svgText(540,  1410, 48,  '400',  '#FFE600', esc(heureFmt), bebas) +
+    svgText(540,  1480, 46,  '700',  '#FFE600', lieu, bebas) +
+    `</svg>`;
+
+  // IMPORTANT : convertir le SVG en PNG avant composite
+  const textLayerPng = await svgToPng(Buffer.from(svgContent));
+
+  // ── 6. Composite sur le template ─────────────────────────────────────────────
+  const outputPath = path.join(GENERATED, `matchday_e${num}_${matchId}.png`);
+
+  await sharp(tpl)
+    .composite([
+      { input: domBuf, left: 130, top: 680 },
+      { input: visBuf, left: 730, top: 680 },
+      { input: textLayerPng, top: 0, left: 0 },
+    ])
+    .png({ compressionLevel: 8 })
+    .toFile(outputPath);
+
+  console.log(`[matchDay] ✅ généré → ${outputPath}`);
+  return `/uploads/generated/matchday_e${num}_${matchId}.png`;
+}
+
+module.exports = { generateProgramme, generateScoreLive, generateResultats, generateMatchDay };

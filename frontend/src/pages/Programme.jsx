@@ -4,6 +4,7 @@ import {
   importFFF, saveFFFMatches, publishBoth, generateProgramme,
   publishFacebook, publishInstagram, getClubs,
 } from '../services/api';
+import ProgrammeTextGenerator from '../components/ProgrammeTextGenerator';
 
 const EQUIPES = ['SCR 1', 'SCR 2', 'SCR 3'];
 const DIVISIONS = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'Coupe'];
@@ -337,6 +338,10 @@ export default function Programme() {
                     </tbody>
                   </table>
                 </div>
+                <ProgrammeTextGenerator
+                  matchIds={group.matchs.map(m => m.id)}
+                  weekendLabel={group.label}
+                />
               </div>
             ))}
           </div>

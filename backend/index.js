@@ -22,6 +22,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // Routes
 app.use('/api/fff', require('./routes/fff'));
@@ -30,6 +31,7 @@ app.use('/api/clubs', require('./routes/clubs'));
 app.use('/api/joueurs', require('./routes/joueurs'));
 app.use('/api/templates', require('./routes/templates'));
 app.use('/api/publish', require('./routes/publish'));
+app.use('/api/convocation', require('./routes/convocation'));
 
 // Health check
 app.get('/api/health', (req, res) => {

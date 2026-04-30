@@ -116,6 +116,276 @@
   margin-bottom: 10px;
 }
 
+/* ── Menu "+ Élément" ──────────────────────────────────────────────────────── */
+.elem-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 300;
+  background: var(--fond-card);
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  padding: 6px;
+  min-width: 230px;
+  box-shadow: var(--shadow-md);
+}
+
+.elem-menu-group + .elem-menu-group {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--bordure);
+}
+
+.elem-menu-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--texte-gris);
+  padding: 4px 8px 2px;
+}
+
+.elem-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--texte-principal);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+.elem-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.elem-menu-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.elem-menu-example {
+  font-size: 11px;
+  color: var(--texte-gris);
+  margin-left: 4px;
+}
+
+/* ── Badges de type ─────────────────────────────────────────────────────────── */
+.zone-type-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.zone-type-texte_fixe {
+  background: rgba(74, 222, 128, 0.12);
+  color: #4ade80;
+}
+.zone-type-texte_dynamique {
+  background: rgba(167, 139, 250, 0.12);
+  color: #a78bfa;
+}
+.zone-type-image_dynamique {
+  background: rgba(96, 165, 250, 0.12);
+  color: #60a5fa;
+}
+
+/* ── Info source dans les zones dynamiques ─────────────────────────────────── */
+.zone-source-info {
+  font-size: 12px;
+  color: var(--texte-gris);
+  margin: 6px 0 8px;
+}
+.zone-source-info code {
+  background: rgba(255,255,255,0.07);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--texte-principal);
+}
+.zone-source-preview {
+  color: var(--vert-primaire, #4ade80);
+  font-style: italic;
+}
+
+/* ── Badge match sélectionné dans la zone de génération ────────────────────── */
+.generate-match-badge {
+  font-size: 12px;
+  color: var(--texte-gris);
+  background: rgba(74, 222, 128, 0.08);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+}
+.generate-match-badge strong {
+  color: var(--texte-principal);
+}
+
+/* ── Aperçu avec données ────────────────────────────────────────────────────── */
+.preview-panel {
+  margin-top: 12px;
+  border-top: 1px solid var(--bordure);
+  padding-top: 10px;
+}
+
+.preview-toggle-btn {
+  width: 100%;
+  justify-content: center;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.preview-toggle-btn:hover { opacity: 1; }
+.preview-toggle-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.preview-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.preview-controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.preview-controls-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texte-principal);
+}
+
+.preview-match-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--texte-gris);
+}
+.preview-match-info span {
+  background: rgba(255,255,255,0.06);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+/* Badge "Aperçu actif" dans le label du canvas */
+.preview-active-badge {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #4ade80;
+  animation: pulse-badge 2s infinite;
+}
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* Bordure verte sur le canvas quand aperçu actif */
+.konva-wrapper--preview {
+  border-color: rgba(74, 222, 128, 0.5) !important;
+  box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.15);
+}
+
+/* ── Légende canvas ─────────────────────────────────────────────────────────── */
+.canvas-legend {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--texte-gris);
+}
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-dot--dashed {
+  background: transparent;
+  border: 1.5px dashed;
+}
+
+/* Konva canvas wrapper */
+.konva-wrapper {
+  border: 1px solid var(--bordure);
+  border-radius: 8px;
+  overflow: hidden;
+  line-height: 0;
+  cursor: crosshair;
+}
+
+/* Zone item active (selected) */
+.zone-item--active {
+  border-color: var(--vert-primaire) !important;
+  box-shadow: 0 0 0 2px rgba(26,107,60,0.25);
+}
+
+/* Zone color dot in header */
+.zone-color-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+/* Color picker field */
+.color-picker-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.color-swatch {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 2px solid var(--bordure);
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+.color-swatch:hover {
+  border-color: var(--vert-primaire);
+}
+
+.color-hex {
+  font-family: monospace;
+  font-size: 13px;
+  color: var(--texte-gris);
+  letter-spacing: 0.05em;
+}
+
+.color-popover {
+  position: absolute;
+  z-index: 300;
+  top: 46px;
+  left: 0;
+  background: var(--fond-card);
+  border: 1px solid var(--bordure);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: var(--shadow-md);
+}
+
 @media (max-width: 640px) {
   .zones-layout { grid-template-columns: 1fr; }
   .zone-preview-container { position: static; }
