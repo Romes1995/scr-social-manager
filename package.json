@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "dev:admin":  "cd frontend && npm run dev",
+    "dev:public": "cd frontend-public && npm run dev",
+    "dev:backend":"cd backend && npm run dev",
+    "dev:all":    "concurrently \"npm run dev:admin\" \"npm run dev:public\" \"npm run dev:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}

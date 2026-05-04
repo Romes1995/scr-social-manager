@@ -14,8 +14,9 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Middlewares
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:5174').split(',');
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, cb) => (!origin || allowedOrigins.some(o => origin.startsWith(o.trim())) ? cb(null, true) : cb(new Error('CORS'))),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
@@ -24,7 +25,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-// Routes
+// Routes publiques (sans auth, accessibles depuis le site fans)
+app.use('/api/public', require('./routes/public'));
+
+// Routes admin
 app.use('/api/fff', require('./routes/fff'));
 app.use('/api/matches', require('./routes/matches'));
 app.use('/api/clubs', require('./routes/clubs'));
