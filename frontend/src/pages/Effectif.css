@@ -95,15 +95,147 @@
 /* Photo */
 .player-photo {
   position: relative;
-  width: 100%;
-  aspect-ratio: 1 / 1;
+  width: 80px;
+  height: 80px;
+  margin: 16px auto 0;
+  border-radius: 50%;
+  overflow: hidden;
   background: var(--fond);
+}
+
+/* ── Zone d'upload image ─────────────────────────────────────────────────────── */
+
+.img-upload-zone {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
   overflow: hidden;
 }
-.player-photo img {
+
+.img-upload-preview {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.img-upload-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+}
+
+.player-photo-initials {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 42px;
+  color: #9ca3af;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.player-photo-hint {
+  font-size: 10px;
+  color: #9ca3af;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Overlay au survol */
+.img-upload-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.18s;
+}
+.img-upload-zone:hover .img-upload-overlay,
+.img-upload-overlay--loading {
+  opacity: 1;
+}
+
+.img-upload-icon {
+  font-size: 22px;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+}
+
+/* Spinner */
+.img-upload-spinner {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Message d'erreur inline */
+.img-upload-error {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(185, 28, 28, 0.9);
+  color: #fff;
+  font-size: 10px;
+  padding: 3px 6px;
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* ── Section célébration ─────────────────────────────────────────────────────── */
+
+.player-celebration {
+  border-top: 1px solid var(--bordure);
+  padding: 8px 10px 10px;
+}
+
+.player-celebration-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--texte-gris);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 6px;
+}
+
+.player-celebration .img-upload-zone {
+  width: 100%;
+  height: 72px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1.5px dashed var(--bordure);
+  transition: border-color 0.15s;
+}
+.player-celebration .img-upload-zone:hover {
+  border-color: var(--vert);
+}
+
+.player-celebration .img-upload-placeholder {
+  background: var(--fond);
+  border-radius: 8px;
+}
+
+.player-celebration-placeholder-icon {
+  font-size: 20px;
+  opacity: 0.45;
+}
+
+.player-celebration .img-upload-preview {
+  object-fit: cover;
+  border-radius: 6px;
 }
 
 .player-photo-placeholder {
@@ -113,27 +245,6 @@
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
-}
-.player-photo-placeholder span {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: 42px;
-  color: #9ca3af;
-  letter-spacing: 2px;
-}
-
-.player-categorie-badge {
-  position: absolute;
-  bottom: 6px;
-  left: 50%;
-  transform: translateX(-50%);
-  white-space: nowrap;
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 2px 8px;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
 /* Infos texte */
@@ -174,6 +285,21 @@
   font-weight: 600;
   color: var(--texte-gris);
   font-size: 10px;
+}
+
+.player-categorie-badge {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */

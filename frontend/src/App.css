@@ -174,3 +174,13 @@
   .page-title { font-size: 22px; }
   .header-status { display: none; }
 }
+
+/* ── Mode dark (homepage) ──────────────────────────────────────────────────── */
+.app--dark {
+  background: #080e0a;
+}
+.main-content--home {
+  max-width: none;
+  padding: 0;
+  background: #080e0a;
+}

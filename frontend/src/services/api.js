@@ -19,12 +19,16 @@ api.interceptors.response.use(
 );
 
 // --- Matches ---
-export const getMatches = (params) => api.get('/matches', { params });
+export const getMatches         = (params) => api.get('/matches', { params });
+export const getStandings       = ()       => api.get('/matches/standings');
+export const getTopScorers      = ()       => api.get('/matches/top-scorers');
+export const getUpcomingMatches = ()       => api.get('/matches', { params: { statut: 'programme' } });
 export const getMatch = (id) => api.get(`/matches/${id}`);
 export const createMatch = (data) => api.post('/matches', data);
 export const updateMatch = (id, data) => api.put(`/matches/${id}`, data);
 export const deleteMatch = (id) => api.delete(`/matches/${id}`);
 export const updateScore = (id, data) => api.patch(`/matches/${id}/score`, data);
+export const updateButeurs = (id, buteurs) => api.patch(`/matches/${id}/buteurs`, { buteurs });
 export const finMatch = (id) => api.post(`/matches/${id}/fin`);
 export const startMatch = (id) => api.post(`/matches/${id}/start`);
 export const resetMatch = (id) => api.post(`/matches/${id}/reset`);

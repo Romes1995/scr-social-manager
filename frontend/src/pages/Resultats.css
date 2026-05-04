@@ -150,3 +150,118 @@
   background: #f0f9f4;
 }
 .visuel-match-row:hover { border-color: var(--vert); }
+
+/* ── Sélecteur de buteur ─────────────────────────────────────────────────────── */
+
+.buteur-select {
+  flex: 1;
+  min-width: 0;
+  max-width: 185px;
+  padding: 3px 6px;
+  border: 1px dashed var(--vert);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--texte-gris);
+  background: var(--fond);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, color 0.15s;
+}
+.buteur-select--filled {
+  border-style: solid;
+  color: var(--texte);
+  font-weight: 600;
+}
+
+.buteur-select:hover,
+.buteur-select:focus {
+  outline: none;
+  border-color: var(--vert);
+  color: var(--texte);
+}
+
+/* ── Boutons action par but ──────────────────────────────────────────────────── */
+
+.btn-add-buteur,
+.btn-remove-buteur,
+.btn-restore-buteur {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-add-buteur {
+  border: 1px solid #86efac;
+  background: #dcfce7;
+  color: #16a34a;
+}
+.btn-add-buteur:hover {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #fff;
+}
+
+.btn-remove-buteur {
+  border: 1px solid #fca5a5;
+  background: #fee2e2;
+  color: #dc2626;
+}
+.btn-remove-buteur:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+
+/* ── Sticky bar validation globale ───────────────────────────────────────────── */
+
+.buteurs-sticky-bar {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--fond-card);
+  border: 1.5px solid var(--vert);
+  border-radius: 12px;
+  padding: 10px 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 200;
+}
+
+.buteurs-sticky-label {
+  font-size: 13px;
+  color: var(--texte-gris);
+  white-space: nowrap;
+}
+
+.btn-valider-global {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--vert);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+.btn-valider-global:hover:not(:disabled) { opacity: 0.85; }
+.btn-valider-global:disabled {
+  background: var(--bordure, #e5e7eb);
+  color: var(--texte-gris);
+  cursor: not-allowed;
+}

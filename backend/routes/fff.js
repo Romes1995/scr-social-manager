@@ -4,188 +4,152 @@ const axios = require('axios');
 const pool = require('../db');
 const { ensureAdversaireClub } = require('../utils/ensureClub');
 
-const FFF_URL = process.env.FFF_URL || 'https://epreuves.fff.fr/competition/club/504189-s-c-roeschwoog/information.html';
-const FFF_CLCOD = '504189'; // Code club SCR Roeschwoog
+// API FFF DOFA (publique, sans authentification)
+const DOFA_BASE = 'https://api-dofa.fff.fr';
+const SCR_CL_NO = 2131;   // Numéro interne FFF du SC Roeschwoog (≠ affiliation 504189)
+const SCR_AFF   = '504189';
 
-const HTTP_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'fr-FR,fr;q=0.9',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Cache-Control': 'no-cache',
-};
-
-// Mappe le eqCod FFF vers le nom d'équipe SCR
-function getEquipeName(eqCod) {
-  const map = { '1': 'SCR 1', '2': 'SCR 2', '3': 'SCR 3' };
-  return map[String(eqCod)] || `SCR ${eqCod}`;
-}
-
-// Extrait le JSON ng-state embarqué dans la page Angular SSR
-function extractNgState(html) {
-  const match = html.match(/<script[^>]*id="ng-state"[^>]*>([\s\S]*?)<\/script>/);
-  if (!match) return null;
-  return JSON.parse(match[1]);
-}
-
-// Parse les matchs depuis le ng-state et les clés API FFF
-function parseMatchesFromNgState(ngState) {
-  const matchs = [];
-
-  // Chercher toutes les clés contenant des matchs
-  const matchKeys = Object.keys(ngState).filter(k => k.includes('/matches?'));
-
-  for (const key of matchKeys) {
-    const body = ngState[key]?.body;
-    if (!body || !body['hydra:member']) continue;
-
-    for (const item of body['hydra:member']) {
-      const d = item.donneesFormatees;
-      if (!d) continue;
-
-      // Filtrer uniquement les matchs à venir
-      if (d.maStatutLib !== 'à venir') continue;
-
-      const recevant = d.recevant;
-      const visiteur = d.visiteur;
-
-      // Identifier quel côté est SCR
-      const scrEstRecevant = recevant?.club?.clCod === FFF_CLCOD;
-      const scrEstVisiteur = visiteur?.club?.clCod === FFF_CLCOD;
-      if (!scrEstRecevant && !scrEstVisiteur) continue;
-
-      const scrSide = scrEstRecevant ? recevant : visiteur;
-      const advSide = scrEstRecevant ? visiteur : recevant;
-
-      // Date et heure
-      const dateObj = new Date(d.date);
-      const dateStr = dateObj.toISOString().slice(0, 10);
-      const heureStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
-
-      matchs.push({
-        equipe: getEquipeName(scrSide?.equipe?.eqCod),
-        adversaire: toTitleCase(advSide?.club?.nom || 'Inconnu'),
-        logo_adversaire: advSide?.club?.logo || null,
-        date: dateStr,
-        heure: heureStr,
-        domicile: scrEstRecevant,
-        division: d.competition?.donneesFormatees?.nom || null,
-        fff_match_id: d.maNo || item.id,
-      });
-    }
-  }
-
-  // Dédupliquer par fff_match_id
-  const seen = new Set();
-  return matchs.filter(m => {
-    if (seen.has(m.fff_match_id)) return false;
-    seen.add(m.fff_match_id);
-    return true;
-  });
-}
-
-// Met en forme le nom de club (ex: "GAMBSHEIM AS" → "As Gambsheim")
 function toTitleCase(str) {
   return str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
-// Récupère les matchs FFF sur plusieurs mois via l'API directe
-async function fetchMatchesFromAPI(clNo, token) {
-  const now = new Date();
-  const debut = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10) + 'T00:00:00+00:00';
-  const fin = new Date(now.getFullYear(), now.getMonth() + 3, 0).toISOString().slice(0, 10) + 'T23:59:59+00:00';
+// "16H00" → "16:00", "" → null
+function parseHeure(time) {
+  if (!time) return null;
+  const clean = time.replace('H', ':').trim();
+  return /^\d{2}:\d{2}$/.test(clean) ? clean : null;
+}
 
-  const url = `https://epreuves.fff.fr/api/data/matches?dateDebut=${encodeURIComponent(debut)}&dateFin=${encodeURIComponent(fin)}&clNo=${clNo}&itemsPerPage=50&pagination=true`;
+// Convertit un match brut DOFA en objet prêt pour la BDD
+function parseMatch(raw) {
+  const scrIsHome = raw.home?.club?.cl_no === SCR_CL_NO;
+  const scrSide   = scrIsHome ? raw.home : raw.away;
+  const advSide   = scrIsHome ? raw.away : raw.home;
 
-  const response = await axios.get(url, {
-    timeout: 10000,
-    headers: {
-      ...HTTP_HEADERS,
-      'Accept': 'application/json',
-      'X-Security-Token': token,
-      'Referer': FFF_URL,
-    },
-  });
+  if (!scrSide || !advSide) return null;
 
-  return response.data;
+  // `code` est le rang réel de l'équipe (1/2/3), `number` est inversé pour les réserves
+  const teamNumber = scrSide.code ?? scrSide.number ?? 1;
+  const equipe     = `SCR ${teamNumber}`;
+
+  const dateObj  = new Date(raw.date);
+  const dateStr  = dateObj.toISOString().slice(0, 10);
+  const heureStr = parseHeure(raw.time);
+
+  const advName  = toTitleCase(advSide.short_name || 'Inconnu');
+  const advLogo  = advSide.club?.logo || null;
+
+  const hasScore  = raw.home_score !== null && raw.home_score !== undefined;
+  const scoreScr  = hasScore ? (scrIsHome ? raw.home_score : raw.away_score) : null;
+  const scoreAdv  = hasScore ? (scrIsHome ? raw.away_score : raw.home_score) : null;
+
+  const statut = hasScore ? 'termine' : 'programme';
+
+  const terrain = raw.terrain;
+  const lieu = terrain
+    ? [terrain.name, terrain.city].filter(Boolean).join(', ')
+    : null;
+
+  return {
+    equipe,
+    adversaire: advName,
+    logo_adversaire: advLogo,
+    date: dateStr,
+    heure: heureStr,
+    domicile: scrIsHome,
+    division: raw.competition?.name || null,
+    lieu,
+    fff_match_id: raw.ma_no,
+    score_scr: scoreScr,
+    score_adv: scoreAdv,
+    statut,
+  };
+}
+
+// Récupère TOUS les matchs du club SCR (toutes pages, toute la saison)
+async function fetchAllMatchesDOFA() {
+  const allRaw = [];
+  let url = `${DOFA_BASE}/api/clubs/${SCR_CL_NO}/matchs?page=1`;
+
+  console.log(`[FFF] Récupération des matchs SCR (cl_no=${SCR_CL_NO}) depuis ${DOFA_BASE}…`);
+
+  while (url) {
+    const resp = await axios.get(url, {
+      timeout: 10000,
+      headers: { Accept: 'application/json' },
+    });
+
+    const data    = resp.data;
+    const members = data['hydra:member'] || [];
+    allRaw.push(...members);
+
+    const nextPath = data['hydra:view']?.['hydra:next'];
+    url = nextPath ? `${DOFA_BASE}${nextPath}` : null;
+
+    console.log(`[FFF]   page chargée : ${members.length} matchs (total cumulé : ${allRaw.length})`);
+  }
+
+  console.log(`[FFF] Total matchs bruts récupérés : ${allRaw.length}`);
+  return allRaw;
 }
 
 // GET /api/fff/import
 router.get('/import', async (req, res) => {
   try {
-    // 1. Charger la page HTML de la FFF
-    const pageResponse = await axios.get(FFF_URL, {
-      timeout: 15000,
-      headers: HTTP_HEADERS,
-      responseType: 'text',
-    });
+    // 1. Récupérer tous les matchs de la saison depuis l'API DOFA
+    const rawMatches = await fetchAllMatchesDOFA();
 
-    const html = pageResponse.data;
+    // 2. Parser et filtrer (ne garder que les matchs impliquant SCR)
+    const matchs = [];
+    const seen   = new Set();
 
-    // 2. Extraire le ng-state Angular SSR (données embarquées)
-    const ngState = extractNgState(html);
-    if (!ngState) {
-      return res.status(502).json({
-        error: 'Impossible d\'extraire les données de la page FFF',
-        detail: 'Le format de la page a peut-être changé (ng-state introuvable)',
-      });
+    for (const raw of rawMatches) {
+      const scrIsHome    = raw.home?.club?.cl_no === SCR_CL_NO;
+      const scrIsAway    = raw.away?.club?.cl_no === SCR_CL_NO;
+      if (!scrIsHome && !scrIsAway) continue;
+
+      const parsed = parseMatch(raw);
+      if (!parsed) continue;
+
+      if (seen.has(parsed.fff_match_id)) continue;
+      seen.add(parsed.fff_match_id);
+
+      matchs.push(parsed);
     }
 
-    // 3. Parser les matchs à venir depuis le ng-state (mois courant)
-    let matchs = parseMatchesFromNgState(ngState);
-
-    // 4. Si token disponible, enrichir avec les mois suivants via l'API directe
-    const token = ngState['VLJAXE'];
-    const clNoKey = Object.keys(ngState).find(k => k.includes('clNo='));
-    const clNoMatch = clNoKey?.match(/clNo=(\d+)/);
-    const clNo = clNoMatch?.[1];
-
-    let source = 'ng-state';
-
-    if (token && clNo) {
-      try {
-        const apiData = await fetchMatchesFromAPI(clNo, token);
-        const apiMembers = apiData?.['hydra:member'] || [];
-
-        // Construire un ng-state partiel pour réutiliser parseMatchesFromNgState
-        const fakeState = {
-          [`analog_/api/data/matches_extended?clNo=${clNo}`]: { body: { 'hydra:member': apiMembers } },
-        };
-        const moreMatchs = parseMatchesFromNgState(fakeState);
-
-        // Fusionner sans doublon
-        const existingIds = new Set(matchs.map(m => m.fff_match_id));
-        let added = 0;
-        for (const m of moreMatchs) {
-          if (!existingIds.has(m.fff_match_id)) {
-            matchs.push(m);
-            existingIds.add(m.fff_match_id);
-            added++;
-          }
-        }
-        if (added > 0) source = 'ng-state + api';
-      } catch (apiErr) {
-        // L'API directe a échoué (token expiré), on garde les données du ng-state
-        console.warn('[FFF] API directe inaccessible, ng-state suffisant:', apiErr.message);
-      }
-    }
-
-    // Trier par date
+    // 3. Trier par date croissante
     matchs.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    const joues   = matchs.filter(m => m.statut === 'termine').length;
+    const aVenir  = matchs.filter(m => m.statut === 'programme').length;
+
+    console.log(`[FFF] Résultat : ${matchs.length} matchs (${joues} joués, ${aVenir} à venir)`);
+
+    // Répartition par équipe
+    const parEquipe = {};
+    for (const m of matchs) {
+      parEquipe[m.equipe] = (parEquipe[m.equipe] || 0) + 1;
+    }
+    console.log('[FFF] Par équipe :', parEquipe);
 
     res.json({
       success: true,
       matchs,
       count: matchs.length,
-      source,
+      joues,
+      a_venir: aVenir,
+      par_equipe: parEquipe,
+      source: 'api-dofa.fff.fr',
     });
 
   } catch (err) {
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT') {
-      return res.status(503).json({ error: 'Impossible de joindre le site FFF', detail: err.message });
+      const msg = 'Impossible de joindre l\'API FFF (api-dofa.fff.fr)';
+      console.error('[FFF Import]', msg, err.message);
+      return res.status(503).json({ error: msg, detail: err.message });
     }
-    console.error('[FFF Import]', err.message);
-    res.status(500).json({ error: 'Erreur lors du scraping FFF', detail: err.message });
+    console.error('[FFF Import] Erreur inattendue :', err.message);
+    res.status(500).json({ error: 'Erreur lors de l\'import FFF', detail: err.message });
   }
 });
 
@@ -197,47 +161,74 @@ router.post('/save', async (req, res) => {
     return res.status(400).json({ error: 'Liste de matchs vide ou invalide' });
   }
 
-  const saved    = [];
-  const skipped  = [];
-  const errors   = [];
+  const saved   = [];
+  const skipped = [];
+  const updated = [];
+  const errors  = [];
 
   for (const match of matchs) {
     try {
       // Déduplication : même équipe + adversaire + date
       if (match.date) {
         const dup = await pool.query(
-          `SELECT id FROM matches WHERE LOWER(equipe)=LOWER($1) AND LOWER(adversaire)=LOWER($2) AND date=$3`,
+          `SELECT id, statut FROM matches WHERE LOWER(equipe)=LOWER($1) AND LOWER(adversaire)=LOWER($2) AND date=$3`,
           [match.equipe || 'SCR 1', match.adversaire, match.date]
         );
+
         if (dup.rows.length > 0) {
-          skipped.push({ adversaire: match.adversaire, date: match.date });
+          const existing = dup.rows[0];
+
+          // Si le match existe en BDD comme 'programme' mais est maintenant 'termine', mettre à jour le score
+          if (existing.statut === 'programme' && match.statut === 'termine'
+              && match.score_scr !== null && match.score_adv !== null) {
+            await pool.query(
+              `UPDATE matches SET score_scr=$1, score_adv=$2, statut='termine', updated_at=NOW()
+               WHERE id=$3`,
+              [match.score_scr, match.score_adv, existing.id]
+            );
+            updated.push({ adversaire: match.adversaire, date: match.date });
+          } else {
+            skipped.push({ adversaire: match.adversaire, date: match.date });
+          }
           continue;
         }
       }
 
+      // Insertion selon le statut
+      const statut = match.statut === 'termine' ? 'termine' : 'programme';
       const result = await pool.query(
-        `INSERT INTO matches (equipe, adversaire, logo_adversaire, date, heure, domicile, division, statut)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 'programme')
+        `INSERT INTO matches
+           (equipe, adversaire, logo_adversaire, date, heure, domicile, division, statut,
+            score_scr, score_adv)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
-          match.equipe || 'SCR 1',
+          match.equipe     || 'SCR 1',
           match.adversaire,
           match.logo_adversaire || null,
-          match.date || null,
-          match.heure || null,
-          match.domicile !== false,
-          match.division || null,
+          match.date       || null,
+          match.heure      || null,
+          match.domicile   !== false,
+          match.division   || null,
+          statut,
+          match.score_scr  ?? null,
+          match.score_adv  ?? null,
         ]
       );
       saved.push(result.rows[0]);
-      // Auto-créer le club adversaire en arrière-plan
       ensureAdversaireClub(match.adversaire);
     } catch (err) {
       errors.push({ match: match.adversaire, error: err.message });
     }
   }
 
-  res.json({ success: true, saved: saved.length, skipped: skipped.length, errors });
+  res.json({
+    success: true,
+    saved: saved.length,
+    updated: updated.length,
+    skipped: skipped.length,
+    errors,
+  });
 });
 
 module.exports = router;

@@ -6,8 +6,229 @@ import {
   previewExcel, confirmImportJoueurs, uploadCelebrationVideo,
   getScoreLiveTemplateStatus, getResultatsTemplateStatus,
   uploadScoreLiveTemplate, uploadResultatTemplate,
+  uploadJoueurImages,
   API_BASE_URL,
 } from '../services/api';
+import './Effectif.css';
+
+// ─── Constantes et helpers Effectif ──────────────────────────────────────────
+
+const CATEGORIES = ['Toutes', 'Senior', 'Senior U20', 'Vétéran', 'U19', 'U18'];
+
+const CATEGORIE_COLORS = {
+  'Senior':     { bg: '#dbeafe', color: '#1d4ed8' },
+  'Senior U20': { bg: '#ede9fe', color: '#6d28d9' },
+  'Vétéran':    { bg: '#fef3c7', color: '#b45309' },
+  'U19':        { bg: '#dcfce7', color: '#15803d' },
+  'U18':        { bg: '#fee2e2', color: '#b91c1c' },
+};
+
+function formatDdn(ddn) {
+  if (!ddn) return null;
+  const d = new Date(ddn);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function calcAge(ddn) {
+  if (!ddn) return null;
+  const today = new Date();
+  const birth = new Date(ddn);
+  let age = today.getFullYear() - birth.getFullYear();
+  if (today < new Date(today.getFullYear(), birth.getMonth(), birth.getDate())) age--;
+  return age;
+}
+
+function imgUrl(path) {
+  if (!path) return null;
+  const base = path.startsWith('/') ? path : '/' + path;
+  return `${API_BASE_URL}${base}?v=${Date.now()}`;
+}
+
+function ImageUploadZone({ src, label, fieldName, joueurId, onUploaded, placeholder }) {
+  const inputRef = useRef(null);
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState(null);
+  const [localSrc, setLocalSrc] = useState(src);
+  const [imgErr, setImgErr]     = useState(false);
+
+  useEffect(() => { setLocalSrc(src); setImgErr(false); }, [src]);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setLoading(true);
+    setError(null);
+    const fd = new FormData();
+    fd.append(fieldName, file);
+    try {
+      const res = await uploadJoueurImages(joueurId, fd);
+      const updated = res.data.joueur;
+      const newPath = fieldName === 'photo' ? updated.photo : updated.celebration_url;
+      setLocalSrc(newPath ? `${API_BASE_URL}${newPath.startsWith('/') ? newPath : '/' + newPath}?v=${Date.now()}` : null);
+      setImgErr(false);
+      onUploaded(updated);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Erreur upload');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const hasImg = localSrc && !imgErr;
+
+  return (
+    <div className="img-upload-zone" onClick={() => !loading && inputRef.current?.click()}>
+      {hasImg ? (
+        <img src={localSrc} alt={label} className="img-upload-preview" onError={() => setImgErr(true)} />
+      ) : (
+        <div className="img-upload-placeholder">{placeholder}</div>
+      )}
+      <div className={`img-upload-overlay ${loading ? 'img-upload-overlay--loading' : ''}`}>
+        {loading ? <span className="img-upload-spinner" /> : <span className="img-upload-icon">📷</span>}
+      </div>
+      {error && <div className="img-upload-error">{error}</div>}
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleFileChange} />
+    </div>
+  );
+}
+
+function PlayerCard({ joueur, onUpdate }) {
+  const age = calcAge(joueur.ddn);
+  const catStyle = CATEGORIE_COLORS[joueur.categorie] || { bg: '#f3f4f6', color: '#4b5563' };
+
+  const photoSrc = joueur.photo
+    ? `${API_BASE_URL}${joueur.photo.startsWith('/') ? joueur.photo : '/' + joueur.photo}`
+    : `${API_BASE_URL}/assets/player_placeholder.png`;
+  const celebSrc = joueur.celebration_url
+    ? `${API_BASE_URL}${joueur.celebration_url.startsWith('/') ? joueur.celebration_url : '/' + joueur.celebration_url}`
+    : null;
+
+  return (
+    <div className="player-card">
+      <div className="player-photo">
+        <ImageUploadZone
+          src={photoSrc}
+          label={`Photo de ${joueur.prenom}`}
+          fieldName="photo"
+          joueurId={joueur.id}
+          onUploaded={onUpdate}
+          placeholder={null}
+        />
+        {joueur.categorie && (
+          <span className="player-categorie-badge" style={{ background: catStyle.bg, color: catStyle.color }}>
+            {joueur.categorie}
+          </span>
+        )}
+      </div>
+      <div className="player-info">
+        <div className="player-prenom">{joueur.prenom}</div>
+        <div className="player-nom">{joueur.nom}</div>
+        {joueur.ddn && (
+          <div className="player-ddn">
+            {formatDdn(joueur.ddn)}
+            {age !== null && <span className="player-age">{age} ans</span>}
+          </div>
+        )}
+      </div>
+      <div className="player-celebration">
+        <span className="player-celebration-label">Célébration</span>
+        <ImageUploadZone
+          src={celebSrc}
+          label={`Célébration de ${joueur.prenom}`}
+          fieldName="celebration"
+          joueurId={joueur.id}
+          onUploaded={onUpdate}
+          placeholder={<span className="player-celebration-placeholder-icon">🎉</span>}
+        />
+      </div>
+    </div>
+  );
+}
+
+function EffectifPanel() {
+  const [joueurs, setJoueurs]     = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [categorie, setCategorie] = useState('Toutes');
+  const [search, setSearch]       = useState('');
+
+  useEffect(() => {
+    getJoueurs()
+      .then(r => setJoueurs(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleUpdate = (updated) => {
+    setJoueurs(prev => prev.map(j => j.id === updated.id ? updated : j));
+  };
+
+  const filtered = useMemo(() => {
+    let list = joueurs;
+    if (categorie !== 'Toutes') list = list.filter(j => j.categorie === categorie);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      list = list.filter(j => j.nom.toLowerCase().includes(q) || j.prenom.toLowerCase().includes(q));
+    }
+    return list;
+  }, [joueurs, categorie, search]);
+
+  const counts = useMemo(() => {
+    const map = { 'Toutes': joueurs.length };
+    for (const j of joueurs) {
+      if (j.categorie) map[j.categorie] = (map[j.categorie] || 0) + 1;
+    }
+    return map;
+  }, [joueurs]);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Effectif SCR Roeschwoog</h1>
+          <p className="page-subtitle">{joueurs.length} joueurs enregistrés</p>
+        </div>
+      </div>
+      <div className="effectif-filters">
+        <div className="effectif-categories">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              className={`effectif-cat-btn ${categorie === cat ? 'active' : ''}`}
+              onClick={() => setCategorie(cat)}
+            >
+              {cat}
+              {counts[cat] !== undefined && <span className="effectif-cat-count">{counts[cat]}</span>}
+            </button>
+          ))}
+        </div>
+        <input
+          className="effectif-search"
+          type="text"
+          placeholder="Rechercher un joueur..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+      </div>
+      {loading ? (
+        <div className="loading-center"><div className="spinner" /><span>Chargement...</span></div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <span className="icon">👤</span>
+          <h3>Aucun joueur trouvé</h3>
+          <p>{search ? 'Modifier la recherche' : 'Aucun joueur dans cette catégorie'}</p>
+        </div>
+      ) : (
+        <>
+          <p className="effectif-count">{filtered.length} joueur{filtered.length > 1 ? 's' : ''}</p>
+          <div className="player-grid">
+            {filtered.map(j => <PlayerCard key={j.id} joueur={j} onUpdate={handleUpdate} />)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function Listes() {
   const [activeTab, setActiveTab] = useState('clubs');
@@ -33,11 +254,15 @@ export default function Listes() {
         <button className={`btn ${activeTab === 'modeles' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('modeles')}>
           Modèles visuels
         </button>
+        <button className={`btn ${activeTab === 'effectif' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('effectif')}>
+          Effectif
+        </button>
       </div>
 
       {activeTab === 'clubs'   && <ClubsPanel />}
       {activeTab === 'joueurs' && <JoueursPanel />}
       {activeTab === 'modeles' && <ModelesPanel />}
+      {activeTab === 'effectif' && <EffectifPanel />}
     </div>
   );
 }

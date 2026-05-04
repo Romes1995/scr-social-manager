@@ -3,12 +3,17 @@ const router  = express.Router();
 const multer  = require('multer');
 const path    = require('path');
 const fs      = require('fs');
+const sharp   = require('sharp');
 const pool    = require('../db');
 const XLSX    = require('xlsx');
 
 // Répertoire pour les vidéos de célébration
 const CELEBRATIONS_DIR = path.join(__dirname, '..', 'uploads', 'celebrations');
 if (!fs.existsSync(CELEBRATIONS_DIR)) fs.mkdirSync(CELEBRATIONS_DIR, { recursive: true });
+
+// Répertoire racine pour les images joueurs
+const JOUEURS_DIR = path.join(__dirname, '..', 'uploads', 'joueurs');
+if (!fs.existsSync(JOUEURS_DIR)) fs.mkdirSync(JOUEURS_DIR, { recursive: true });
 
 // Multer pour les vidéos de célébration
 const uploadCelebration = multer({
@@ -127,6 +132,103 @@ router.post('/confirm-import', async (req, res) => {
   }
 
   res.json({ success: true, inserted, skipped, errors });
+});
+
+// Multer en mémoire pour les images joueurs (Sharp redimensionne ensuite)
+const uploadImages = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext)) cb(null, true);
+    else cb(new Error('Seuls les fichiers image (JPG/PNG/WebP) sont acceptés'));
+  },
+}).fields([
+  { name: 'photo',       maxCount: 1 },
+  { name: 'celebration', maxCount: 1 },
+]);
+
+// PUT /api/joueurs/:id/images — Upload photo et/ou image de célébration
+router.put('/:id/images', (req, res, next) => uploadImages(req, res, err => {
+  if (err) return res.status(400).json({ error: err.message });
+  next();
+}), async (req, res) => {
+  try {
+    const id      = req.params.id;
+    const files   = req.files || {};
+    const updates = {};
+
+    const playerDir = path.join(JOUEURS_DIR, String(id));
+    if (!fs.existsSync(playerDir)) fs.mkdirSync(playerDir, { recursive: true });
+
+    if (files.photo?.[0]) {
+      const outPath = path.join(playerDir, 'photo.png');
+      console.log('[upload] processPlayerPhoto appelé pour:', outPath);
+      console.log('[upload] buffer size:', files.photo[0].buffer.length, 'bytes, mimetype:', files.photo[0].mimetype);
+
+      const { data, info } = await sharp(files.photo[0].buffer)
+        .resize(400, 400, { fit: 'contain', background: { r: 255, g: 0, b: 255, alpha: 1 } })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      console.log('[upload] image redimensionnée:', info.width, 'x', info.height, 'channels:', info.channels);
+
+      let firstMagenta = null;
+      let transparentCount = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i + 1], b = data[i + 2];
+        if (r > 180 && g < 80 && b > 180) {
+          if (!firstMagenta) {
+            firstMagenta = { r, g, b, pixel: i / 4 };
+            console.log('[upload] premier pixel magenta:', r, g, b, '@ pixel', i / 4);
+          }
+          data[i + 3] = 0;
+          transparentCount++;
+        }
+      }
+      if (!firstMagenta) console.log('[upload] aucun pixel magenta détecté');
+      console.log('[upload] pixels rendus transparents:', transparentCount, '/', info.width * info.height);
+
+      await sharp(Buffer.from(data), {
+        raw: { width: info.width, height: info.height, channels: 4 },
+      }).png().toFile(outPath);
+      console.log('[upload] photo sauvegardée:', outPath);
+
+      // Supprimer l'ancien fichier JPEG si présent
+      const oldJpg = path.join(playerDir, 'photo.jpg');
+      if (fs.existsSync(oldJpg)) fs.unlinkSync(oldJpg);
+
+      updates.photo = `/uploads/joueurs/${id}/photo.png`;
+    }
+
+    if (files.celebration?.[0]) {
+      const outPath = path.join(playerDir, 'celebration.jpg');
+      await sharp(files.celebration[0].buffer)
+        .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+        .jpeg({ quality: 88 })
+        .toFile(outPath);
+      updates.celebration_url = `/uploads/joueurs/${id}/celebration.jpg`;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: 'Aucun fichier valide reçu' });
+    }
+
+    const setClauses = Object.keys(updates)
+      .map((col, i) => `${col}=$${i + 1}`)
+      .join(', ');
+    const values = [...Object.values(updates), id];
+    const result = await pool.query(
+      `UPDATE joueurs SET ${setClauses} WHERE id=$${values.length} RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Joueur non trouvé' });
+    res.json({ success: true, joueur: result.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // POST /api/joueurs/:id/celebration — Upload vidéo de célébration
