@@ -231,4 +231,23 @@ router.post('/save', async (req, res) => {
   });
 });
 
+// GET /api/fff/refresh-classement — vide le cache FFF et force un nouveau scraping
+router.get('/refresh-classement', async (req, res) => {
+  try {
+    const { getClassementFFF, clearCache } = require('../services/fffClassementScraper');
+    clearCache();
+    const data = await getClassementFFF({ forceRefresh: true });
+    const summary = {};
+    for (const [team, val] of Object.entries(data)) {
+      summary[team] = val
+        ? { rows: val.rows.length, scrRow: val.rows.find(r => r.isSCR) ?? null, source: 'fff_scraper' }
+        : { rows: 0, source: 'failed' };
+    }
+    res.json({ success: true, summary });
+  } catch (err) {
+    console.error('[refresh-classement]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

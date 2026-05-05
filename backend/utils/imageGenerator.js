@@ -610,13 +610,18 @@ async function generateResultats(matchs) {
  * @param {number|string} matchId    - ID du match en base
  * @param {number}        teamNumber - Numéro d'équipe SCR (1, 2 ou 3)
  */
-async function generateMatchDay(matchId, teamNumber = 1) {
+async function generateMatchDay(matchId, teamNumber = 1, matchData = null) {
   if (!fs.existsSync(GENERATED)) fs.mkdirSync(GENERATED, { recursive: true });
 
   // ── 1. Chargement du match ──────────────────────────────────────────────────
-  const r = await pool.query('SELECT * FROM matches WHERE id=$1', [matchId]);
-  if (r.rows.length === 0) throw new Error('Match non trouvé : id=' + matchId);
-  const match = r.rows[0];
+  let match;
+  if (matchData) {
+    match = matchData;
+  } else {
+    const r = await pool.query('SELECT * FROM matches WHERE id=$1', [matchId]);
+    if (r.rows.length === 0) throw new Error('Match non trouvé : id=' + matchId);
+    match = r.rows[0];
+  }
   console.log(`[matchDay] match : "${match.equipe}" vs "${match.adversaire}" | domicile=${match.domicile}`);
 
   // ── 2. Template ─────────────────────────────────────────────────────────────
@@ -724,7 +729,8 @@ async function generateMatchDay(matchId, teamNumber = 1) {
   const textLayerPng = await svgToPng(Buffer.from(svgContent));
 
   // ── 6. Composite sur le template ─────────────────────────────────────────────
-  const outputPath = path.join(GENERATED, `matchday_e${num}_${matchId}.png`);
+  const fileId = matchId != null ? matchId : Date.now();
+  const outputPath = path.join(GENERATED, `matchday_e${num}_${fileId}.png`);
 
   await sharp(tpl)
     .composite([
@@ -736,7 +742,7 @@ async function generateMatchDay(matchId, teamNumber = 1) {
     .toFile(outputPath);
 
   console.log(`[matchDay] ✅ généré → ${outputPath}`);
-  return `/uploads/generated/matchday_e${num}_${matchId}.png`;
+  return `/uploads/generated/matchday_e${num}_${fileId}.png`;
 }
 
 module.exports = { generateProgramme, generateScoreLive, generateResultats, generateMatchDay };

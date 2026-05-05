@@ -7,6 +7,7 @@ echo "🟢 Démarrage SCR Social Manager..."
 echo "⏹️  Arrêt des processus existants..."
 lsof -ti:3001 | xargs kill -9 2>/dev/null
 lsof -ti:5173 | xargs kill -9 2>/dev/null
+lsof -ti:5175 | xargs kill -9 2>/dev/null
 sleep 1
 
 # Démarrage Backend
@@ -21,10 +22,18 @@ echo "🎨 Démarrage Frontend (port 5173)..."
 cd ~/scr-social-manager/frontend
 npm run dev &
 
+sleep 2
+
+# Démarrage Site Vitrine
+echo "🌐 Démarrage Site Vitrine (port 5175)..."
+cd ~/scr-social-manager/frontend-public
+npm run dev &
+
 echo ""
 echo "✅ SCR Social Manager lancé !"
-echo "   → Frontend : http://localhost:5173"
-echo "   → Backend  : http://localhost:3001"
+echo "   → Frontend  : http://localhost:5173"
+echo "   → Vitrine   : http://localhost:5175"
+echo "   → Backend   : http://localhost:3001"
 echo ""
 echo "Ctrl+C pour tout arrêter"
 

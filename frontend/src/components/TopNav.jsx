@@ -147,6 +147,14 @@ export default function TopNav({ activeTab, setActiveTab }) {
 
           {/* Actions */}
           <div className="topnav-actions">
+            <a
+              href="http://localhost:5175/vitrine"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="topnav-btn topnav-btn--vitrine"
+            >
+              Site vitrine ↗
+            </a>
             <button
               className="topnav-btn topnav-btn--ghost"
               onClick={handleImport}

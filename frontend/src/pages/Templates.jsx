@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Stage, Layer, Image as KonvaImage, Rect, Text, Transformer, Group } from 'react-konva';
 import { HexColorPicker } from 'react-colorful';
-import { getTemplates, createTemplate, updateTemplate, deleteTemplate, genererImage, genererDynamique, getMatches } from '../services/api';
+import { getTemplates, createTemplate, updateTemplate, deleteTemplate, genererImage, genererDynamique, getMatches, getPresetInfo, generatePresetPreview } from '../services/api';
 import './Templates.css';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -27,6 +27,130 @@ const ZONE_TEMPLATE = {
   id: '', label: '', x: 50, y: 50, width: 300, height: 60,
   fontSize: 36, color: '#ffffff', bold: false, placeholder: '',
   fontFamily: 'Arial', type: 'texte_fixe',
+};
+
+// ── Zones prédéfinies extraites du générateur Sharp ────────────────────────────
+const PRESET_ZONES = {
+  matchday: {
+    label: 'Match Day', width: 1080, height: 1920,
+    zones: [
+      { id: 'logo_dom',  label: 'Logo Domicile', type: 'image', x: 130, y: 680,  width: 220, height: 220, color: '#60a5fa' },
+      { id: 'logo_vis',  label: 'Logo Visiteur',  type: 'image', x: 730, y: 680,  width: 220, height: 220, color: '#f472b6' },
+      { id: 'scr_label', label: 'Équipe SCR',     type: 'texte', x: 190, y: 55,   width: 700, height: 26,  color: '#4ade80' },
+      { id: 'dom_nom',   label: 'Domicile',        type: 'texte', x: 70,  y: 1016, width: 400, height: 32,  color: '#fbbf24' },
+      { id: 'vs',        label: 'VS',              type: 'texte', x: 490, y: 1016, width: 100, height: 32,  color: '#fb923c' },
+      { id: 'vis_nom',   label: 'Visiteur',         type: 'texte', x: 610, y: 1016, width: 400, height: 32,  color: '#fbbf24' },
+      { id: 'date',      label: 'Date',             type: 'texte', x: 190, y: 1170, width: 700, height: 120, color: '#a78bfa' },
+      { id: 'heure',     label: 'Heure',            type: 'texte', x: 340, y: 1386, width: 400, height: 48,  color: '#34d399' },
+      { id: 'lieu',      label: 'Lieu',             type: 'texte', x: 290, y: 1457, width: 500, height: 46,  color: '#f87171' },
+    ],
+  },
+  score_live: {
+    label: 'Score Live', width: 1080, height: 1920,
+    zones: [
+      { id: 'logo_g',  label: 'Logo G',      type: 'image', x: 107, y: 1041, width: 390, height: 390, color: '#60a5fa' },
+      { id: 'logo_d',  label: 'Logo D',      type: 'image', x: 582, y: 1023, width: 390, height: 390, color: '#f472b6' },
+      { id: 'score_g', label: 'Score G',     type: 'texte', x: 87,  y: 1474, width: 430, height: 215, color: '#4ade80' },
+      { id: 'tiret',   label: '—',           type: 'texte', x: 460, y: 1474, width: 160, height: 215, color: '#fb923c' },
+      { id: 'score_d', label: 'Score D',     type: 'texte', x: 562, y: 1474, width: 430, height: 215, color: '#4ade80' },
+      { id: 'fin',     label: 'Fin de match', type: 'texte', x: 190, y: 830,  width: 700, height: 100, color: '#f87171', optional: true },
+    ],
+  },
+  resultats: {
+    label: 'Résultats', hasVariants: true, width: 940, height: 788,
+    variants: {
+      1: [
+        { id: 'lg', label: 'Logo G',  type: 'image', x: 68,  y: 349, width: 71,  height: 71,  color: '#60a5fa' },
+        { id: 'ld', label: 'Logo D',  type: 'image', x: 802, y: 346, width: 76,  height: 76,  color: '#f472b6' },
+        { id: 'sc', label: 'Score',   type: 'texte', x: 128, y: 246, width: 400, height: 114, color: '#4ade80' },
+        { id: 'ng', label: 'Nom G',   type: 'texte', x: 307, y: 316, width: 400, height: 20,  color: '#fbbf24' },
+        { id: 'nd', label: 'Nom D',   type: 'texte', x: 537, y: 316, width: 400, height: 20,  color: '#fbbf24' },
+        { id: 'bu', label: 'Buteurs', type: 'texte', x: 307, y: 358, width: 400, height: 14,  color: '#f87171' },
+      ],
+      2: [
+        { id: 'm1_lg', label: 'M1 Logo G', type: 'image', x: 75,  y: 279, width: 60,  height: 60,  color: '#60a5fa' },
+        { id: 'm1_ld', label: 'M1 Logo D', type: 'image', x: 804, y: 283, width: 65,  height: 65,  color: '#f472b6' },
+        { id: 'm1_sc', label: 'M1 Score',  type: 'texte', x: 128, y: 179, width: 400, height: 114, color: '#4ade80' },
+        { id: 'm2_lg', label: 'M2 Logo G', type: 'image', x: 75,  y: 419, width: 60,  height: 60,  color: '#60a5fa' },
+        { id: 'm2_ld', label: 'M2 Logo D', type: 'image', x: 804, y: 423, width: 65,  height: 65,  color: '#f472b6' },
+        { id: 'm2_sc', label: 'M2 Score',  type: 'texte', x: 128, y: 319, width: 400, height: 114, color: '#4ade80' },
+      ],
+      3: [
+        { id: 'm1_lg', label: 'M1 Logo G', type: 'image', x: 77,  y: 196, width: 52,  height: 52,  color: '#60a5fa' },
+        { id: 'm1_ld', label: 'M1 Logo D', type: 'image', x: 809, y: 186, width: 57,  height: 57,  color: '#f472b6' },
+        { id: 'm1_sc', label: 'M1 Score',  type: 'texte', x: 128, y: 84,  width: 400, height: 114, color: '#4ade80' },
+        { id: 'm2_lg', label: 'M2 Logo G', type: 'image', x: 77,  y: 358, width: 52,  height: 52,  color: '#60a5fa' },
+        { id: 'm2_ld', label: 'M2 Logo D', type: 'image', x: 809, y: 355, width: 57,  height: 57,  color: '#f472b6' },
+        { id: 'm2_sc', label: 'M2 Score',  type: 'texte', x: 128, y: 246, width: 400, height: 114, color: '#4ade80' },
+        { id: 'm3_lg', label: 'M3 Logo G', type: 'image', x: 77,  y: 520, width: 52,  height: 52,  color: '#60a5fa' },
+        { id: 'm3_ld', label: 'M3 Logo D', type: 'image', x: 809, y: 517, width: 57,  height: 57,  color: '#f472b6' },
+        { id: 'm3_sc', label: 'M3 Score',  type: 'texte', x: 128, y: 408, width: 400, height: 114, color: '#4ade80' },
+      ],
+    },
+  },
+  programme: {
+    label: 'Programme Story', hasVariants: true, width: 1080, height: 1920,
+    variants: {
+      1: [
+        { id: 'lg', label: 'Logo G',   type: 'image', x: 28,  y: 897,  width: 127, height: 127, color: '#60a5fa' },
+        { id: 'ld', label: 'Logo D',   type: 'image', x: 925, y: 897,  width: 127, height: 127, color: '#f472b6' },
+        { id: 'tg', label: 'Équipe G', type: 'texte', x: 150, y: 948,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'td', label: 'Équipe D', type: 'texte', x: 528, y: 948,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'dt', label: 'Date',     type: 'texte', x: 340, y: 1003, width: 400, height: 24,  color: '#fbbf24' },
+      ],
+      2: [
+        { id: 'm1_lg', label: 'M1 Logo G',  type: 'image', x: 28,  y: 723,  width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm1_ld', label: 'M1 Logo D',  type: 'image', x: 925, y: 723,  width: 127, height: 127, color: '#f472b6' },
+        { id: 'm1_tg', label: 'M1 Éq G',   type: 'texte', x: 150, y: 774,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm1_td', label: 'M1 Éq D',   type: 'texte', x: 528, y: 774,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm1_dt', label: 'M1 Date',   type: 'texte', x: 340, y: 829,  width: 400, height: 24,  color: '#fbbf24' },
+        { id: 'm2_lg', label: 'M2 Logo G',  type: 'image', x: 28,  y: 1070, width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm2_ld', label: 'M2 Logo D',  type: 'image', x: 925, y: 1070, width: 127, height: 127, color: '#f472b6' },
+        { id: 'm2_tg', label: 'M2 Éq G',   type: 'texte', x: 150, y: 1121, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm2_td', label: 'M2 Éq D',   type: 'texte', x: 528, y: 1121, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm2_dt', label: 'M2 Date',   type: 'texte', x: 340, y: 1176, width: 400, height: 24,  color: '#fbbf24' },
+      ],
+      3: [
+        { id: 'm1_lg', label: 'M1 Logo G',  type: 'image', x: 28,  y: 618,  width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm1_ld', label: 'M1 Logo D',  type: 'image', x: 925, y: 618,  width: 127, height: 127, color: '#f472b6' },
+        { id: 'm1_tg', label: 'M1 Éq G',   type: 'texte', x: 150, y: 669,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm1_td', label: 'M1 Éq D',   type: 'texte', x: 528, y: 669,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm1_dt', label: 'M1 Date',   type: 'texte', x: 340, y: 724,  width: 400, height: 24,  color: '#fbbf24' },
+        { id: 'm2_lg', label: 'M2 Logo G',  type: 'image', x: 28,  y: 965,  width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm2_ld', label: 'M2 Logo D',  type: 'image', x: 925, y: 965,  width: 127, height: 127, color: '#f472b6' },
+        { id: 'm2_tg', label: 'M2 Éq G',   type: 'texte', x: 150, y: 1016, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm2_td', label: 'M2 Éq D',   type: 'texte', x: 528, y: 1016, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm2_dt', label: 'M2 Date',   type: 'texte', x: 340, y: 1071, width: 400, height: 24,  color: '#fbbf24' },
+        { id: 'm3_lg', label: 'M3 Logo G',  type: 'image', x: 28,  y: 1310, width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm3_ld', label: 'M3 Logo D',  type: 'image', x: 925, y: 1310, width: 127, height: 127, color: '#f472b6' },
+        { id: 'm3_tg', label: 'M3 Éq G',   type: 'texte', x: 150, y: 1361, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm3_td', label: 'M3 Éq D',   type: 'texte', x: 528, y: 1361, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm3_dt', label: 'M3 Date',   type: 'texte', x: 340, y: 1416, width: 400, height: 24,  color: '#fbbf24' },
+      ],
+      4: [
+        { id: 'm1_lg', label: 'M1 Logo G',  type: 'image', x: 28,  y: 536,  width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm1_ld', label: 'M1 Logo D',  type: 'image', x: 925, y: 536,  width: 127, height: 127, color: '#f472b6' },
+        { id: 'm1_tg', label: 'M1 Éq G',   type: 'texte', x: 150, y: 587,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm1_td', label: 'M1 Éq D',   type: 'texte', x: 528, y: 587,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm1_dt', label: 'M1 Date',   type: 'texte', x: 340, y: 642,  width: 400, height: 24,  color: '#fbbf24' },
+        { id: 'm2_lg', label: 'M2 Logo G',  type: 'image', x: 28,  y: 801,  width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm2_ld', label: 'M2 Logo D',  type: 'image', x: 925, y: 801,  width: 127, height: 127, color: '#f472b6' },
+        { id: 'm2_tg', label: 'M2 Éq G',   type: 'texte', x: 150, y: 852,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm2_td', label: 'M2 Éq D',   type: 'texte', x: 528, y: 852,  width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm2_dt', label: 'M2 Date',   type: 'texte', x: 340, y: 907,  width: 400, height: 24,  color: '#fbbf24' },
+        { id: 'm3_lg', label: 'M3 Logo G',  type: 'image', x: 28,  y: 1066, width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm3_ld', label: 'M3 Logo D',  type: 'image', x: 925, y: 1066, width: 127, height: 127, color: '#f472b6' },
+        { id: 'm3_tg', label: 'M3 Éq G',   type: 'texte', x: 150, y: 1117, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm3_td', label: 'M3 Éq D',   type: 'texte', x: 528, y: 1117, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm3_dt', label: 'M3 Date',   type: 'texte', x: 340, y: 1172, width: 400, height: 24,  color: '#fbbf24' },
+        { id: 'm4_lg', label: 'M4 Logo G',  type: 'image', x: 28,  y: 1331, width: 127, height: 127, color: '#60a5fa' },
+        { id: 'm4_ld', label: 'M4 Logo D',  type: 'image', x: 925, y: 1331, width: 127, height: 127, color: '#f472b6' },
+        { id: 'm4_tg', label: 'M4 Éq G',   type: 'texte', x: 150, y: 1382, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm4_td', label: 'M4 Éq D',   type: 'texte', x: 528, y: 1382, width: 400, height: 24,  color: '#4ade80' },
+        { id: 'm4_dt', label: 'M4 Date',   type: 'texte', x: 340, y: 1437, width: 400, height: 24,  color: '#fbbf24' },
+      ],
+    },
+  },
 };
 
 const DYNAMIC_ELEMENTS = {
@@ -108,6 +232,14 @@ async function loadImages(urlMap) {
     })
   );
   return result;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
 }
 
 // ── ZoneRect ──────────────────────────────────────────────────────────────────
@@ -297,6 +429,139 @@ function ColorPickerField({ color, onChange }) {
   );
 }
 
+// ── PresetTemplateCard ────────────────────────────────────────────────────────
+const PRESET_W = 260;
+
+function PresetTemplateCard({ type, info }) {
+  const def = PRESET_ZONES[type];
+  if (!def || !info) return null;
+
+  const [variant,      setVariant]      = useState(1);
+  const [showOverlay,  setShowOverlay]  = useState(false);
+  const [generatedUrl, setGeneratedUrl] = useState(null);
+  const [generating,   setGenerating]   = useState(false);
+  const [genError,     setGenError]     = useState(null);
+
+  const fichier = def.hasVariants ? (info.variants?.[variant]?.fichier ?? null) : (info.fichier ?? null);
+  const zones   = def.hasVariants ? (def.variants?.[variant] ?? [])             : (def.zones ?? []);
+
+  const scale    = PRESET_W / def.width;
+  const displayH = Math.round(def.height * scale);
+  const variantKeys = def.hasVariants ? Object.keys(def.variants ?? {}).map(Number) : [];
+
+  const changeVariant = (n) => { setVariant(n); setGeneratedUrl(null); setGenError(null); setShowOverlay(false); };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const res = await generatePresetPreview(type, variant);
+      setGeneratedUrl(res.data.url);
+    } catch (err) {
+      setGenError(err.response?.data?.error || 'Erreur lors de la génération');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="template-card card">
+      {/* En-tête */}
+      <div className="preset-card-meta">
+        <span className="template-type-badge">{def.label}</span>
+        <span className="preset-dims">{def.width}×{def.height}</span>
+      </div>
+
+      {/* Sélecteur variante */}
+      {variantKeys.length > 0 && (
+        <div className="preset-variants">
+          {variantKeys.map(n => {
+            const available = !!info.variants?.[n]?.fichier;
+            return (
+              <button
+                key={n}
+                className={`preset-variant-btn${n === variant ? ' active' : ''}${!available ? ' unavailable' : ''}`}
+                onClick={() => changeVariant(n)}
+                title={!available ? 'Template non uploadé' : ''}
+              >
+                {n} match{n > 1 ? 's' : ''}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Visualiseur */}
+      <div className="preset-viewer" style={{ width: PRESET_W, height: displayH }}>
+        {fichier ? (
+          <>
+            <img src={`${API_BASE}${fichier}`} alt={def.label} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            {showOverlay && (
+              <div className="preset-zone-overlay">
+                {zones.map(zone => (
+                  <div
+                    key={zone.id}
+                    className={`preset-zone-rect${zone.optional ? ' preset-zone-rect--optional' : ''}`}
+                    style={{
+                      left:        Math.round(zone.x      * scale),
+                      top:         Math.round(zone.y      * scale),
+                      width:       Math.max(2, Math.round(zone.width  * scale)),
+                      height:      Math.max(2, Math.round(zone.height * scale)),
+                      borderColor: zone.color,
+                      background:  hexToRgba(zone.color, 0.18),
+                    }}
+                    title={`${zone.label}  (${zone.x}, ${zone.y})  ${zone.width}×${zone.height}px`}
+                  >
+                    <span className="preset-zone-label" style={{ color: zone.color }}>
+                      {zone.label}{zone.optional ? ' ●' : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="preset-no-template"><span>🎨</span><small>Aucun template</small></div>
+        )}
+      </div>
+
+      {/* Aperçu généré */}
+      {generatedUrl && (
+        <div className="preset-generated-preview">
+          <div className="preset-generated-label">Aperçu généré</div>
+          <img src={generatedUrl} alt="Aperçu" style={{ width: '100%', borderRadius: 6, border: '1px solid var(--bordure)' }} />
+          <a href={generatedUrl} download className="btn btn-ghost btn-sm" style={{ marginTop: 6, display: 'block', textAlign: 'center' }}>
+            ⬇ Télécharger
+          </a>
+        </div>
+      )}
+      {genError && (
+        <div className="alert alert-error" style={{ margin: '4px 14px 8px', fontSize: 12 }}>❌ {genError}</div>
+      )}
+
+      {/* Actions */}
+      <div className="template-actions">
+        <button
+          className={`btn btn-sm${showOverlay ? ' btn-primary' : ' btn-ghost'}`}
+          onClick={() => setShowOverlay(o => !o)}
+          disabled={!fichier}
+          style={{ flex: 1 }}
+        >
+          {showOverlay ? '⊟ Zones' : '⊞ Zones'}
+        </button>
+        <button
+          className="btn btn-sm btn-secondary"
+          onClick={handleGenerate}
+          disabled={!fichier || generating}
+          style={{ flex: 1 }}
+        >
+          {generating ? '⏳...' : '🎨 Aperçu'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Composant principal ───────────────────────────────────────────────────────
 export default function Templates() {
   const [templates,        setTemplates]        = useState([]);
@@ -313,6 +578,9 @@ export default function Templates() {
   const [genValeurs,       setGenValeurs]       = useState({});
   const [generating,       setGenerating]       = useState(false);
   const [generatedUrl,     setGeneratedUrl]     = useState(null);
+
+  // Presets
+  const [presetInfo,       setPresetInfo]       = useState(null);
 
   // Canvas Konva
   const [bgImage,          setBgImage]          = useState(null);
@@ -389,6 +657,12 @@ export default function Templates() {
   }, [filterType]);
 
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
+
+  useEffect(() => {
+    getPresetInfo()
+      .then(r => setPresetInfo(r.data))
+      .catch(() => setPresetInfo({}));
+  }, []);
 
   const openCreate = () => {
     setForm({ nom: '', type: 'programme', equipe: 'Toutes' });
@@ -580,6 +854,24 @@ export default function Templates() {
       {alert && (
         <div className={`alert alert-${alert.type}`}>
           {alert.type === 'success' ? '✅' : '❌'} {alert.msg}
+        </div>
+      )}
+
+      {/* ── Section presets ───────────────────────────────────────────────── */}
+      {presetInfo && (
+        <div className="preset-section">
+          <div className="preset-section-header">
+            <h2 className="preset-section-title">Templates prédéfinis</h2>
+            <p className="preset-section-subtitle">
+              Aperçu du PNG de base · zones de positionnement · génération avec données fictives
+            </p>
+          </div>
+          <div className="templates-grid">
+            {['matchday', 'resultats', 'score_live', 'programme'].map(type => (
+              <PresetTemplateCard key={type} type={type} info={presetInfo[type]} />
+            ))}
+          </div>
+          <div className="preset-section-divider" />
         </div>
       )}
 

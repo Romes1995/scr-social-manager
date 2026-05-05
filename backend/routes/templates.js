@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
 const pool = require('../db');
-const { generateProgramme, generateScoreLive, generateResultats } = require('../utils/imageGenerator');
+const { generateProgramme, generateScoreLive, generateResultats, generateMatchDay: _generateMatchDay } = require('../utils/imageGenerator');
 
 // Config multer
 const storage = multer.diskStorage({
@@ -84,6 +84,91 @@ router.get('/resultats/status', (req, res) => {
     return { num, filename, exists, size_kb: Math.round(size / 1024) };
   });
   res.json({ status: files });
+});
+
+// GET /api/templates/preset-info — infos sur les templates prédéfinis disponibles
+router.get('/preset-info', async (req, res) => {
+  try {
+    const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+
+    const dbFile = async (type) => {
+      const r = await pool.query(
+        `SELECT fichier FROM templates WHERE type=$1 ORDER BY id DESC LIMIT 1`, [type]
+      );
+      if (!r.rows.length) return null;
+      const diskPath = path.join(__dirname, '..', r.rows[0].fichier);
+      return fs.existsSync(diskPath) ? r.rows[0].fichier : null;
+    };
+
+    const mdFile = await dbFile('matchday')
+      || (fs.existsSync(path.join(UPLOADS_DIR, 'template_1776525499057.png'))
+          ? '/uploads/template_1776525499057.png' : null);
+    const slFile = await dbFile('score_live')
+      || (fs.existsSync(path.join(TEMPLATES_DIR, 'score_live_scr1.png'))
+          ? '/uploads/templates/score_live_scr1.png' : null);
+
+    const rVariants = {};
+    for (const n of [1, 2, 3]) {
+      const suffix = n === 1 ? '1match' : `${n}matchs`;
+      const fp = path.join(TEMPLATES_DIR, `resultat_${suffix}.png`);
+      rVariants[n] = { fichier: fs.existsSync(fp) ? `/uploads/templates/resultat_${suffix}.png` : null };
+    }
+
+    const pVariants = {};
+    for (const n of [1, 2, 3, 4]) {
+      const suffix = n === 1 ? '1match' : `${n}matchs`;
+      const fp = path.join(TEMPLATES_DIR, `programme_story_${suffix}.png`);
+      pVariants[n] = { fichier: fs.existsSync(fp) ? `/uploads/templates/programme_story_${suffix}.png` : null };
+    }
+
+    res.json({
+      matchday:  { fichier: mdFile, width: 1080, height: 1920 },
+      score_live: { fichier: slFile, width: 1080, height: 1920 },
+      resultats: { variants: rVariants, width: 940, height: 788 },
+      programme: { variants: pVariants, width: 1080, height: 1920 },
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/templates/preview-preset — génère un aperçu avec données fictives
+router.post('/preview-preset', async (req, res) => {
+  const { type, variant = 1 } = req.body;
+  const n = Math.min(Math.max(parseInt(variant) || 1, 1), 4);
+
+  const FAKE = {
+    equipe: 'SCR 1', adversaire: 'AS Gambsheim',
+    date: '2026-05-10', heure: '15:00', lieu: 'Roeschwoog', division: 'D1',
+    domicile: true, score_scr: 2, score_adv: 1, buteurs: ['Dupont J.', 'Martin T.'],
+  };
+  const FAKES = [
+    { ...FAKE, equipe: 'SCR 1', adversaire: 'AS Gambsheim' },
+    { ...FAKE, equipe: 'SCR 2', adversaire: 'FC Beinheim',   score_scr: 1, score_adv: 1, domicile: false },
+    { ...FAKE, equipe: 'SCR 3', adversaire: 'US Drusenheim', score_scr: 3, score_adv: 0 },
+    { ...FAKE, equipe: 'SCR 1', adversaire: 'FC Lauterbourg', score_scr: 0, score_adv: 2 },
+  ];
+
+  try {
+    const base = `http://localhost:${process.env.PORT || 3001}`;
+    let url;
+    if (type === 'matchday') {
+      url = await _generateMatchDay(null, 1, FAKE);
+    } else if (type === 'score_live') {
+      url = await generateScoreLive(999, FAKE);
+    } else if (type === 'resultats') {
+      url = await generateResultats(FAKES.slice(0, Math.min(n, 3)));
+    } else if (type === 'programme') {
+      const result = await generateProgramme(FAKES.slice(0, Math.min(n, 4)));
+      url = result.story;
+    } else {
+      return res.status(400).json({ error: 'Type invalide' });
+    }
+    res.json({ success: true, url: base + url });
+  } catch (err) {
+    console.error('[preview-preset]', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/templates/:id
@@ -418,6 +503,83 @@ router.post('/generate-resultat-weekend', async (req, res) => {
     );
     if (matchesDB.length === 0) throw new Error('Aucun match trouvé pour ces IDs');
 
+    // ── Lire les zones depuis la table templates ──────────────────────────────
+    // Cherche un template de type 'resultats' pour l'équipe concernée,
+    // avec fallback sur 'Toutes' / NULL. Ne s'applique qu'au cas 1 match
+    // (layouts 2 et 3 matchs ont des positions différentes).
+    const scrEquipeFirst = matchesDB[0]?.equipe || null;
+    const tplQ = await pool.query(
+      `SELECT zones FROM templates
+       WHERE type = 'resultats'
+         AND (equipe = $1 OR equipe IS NULL OR equipe = '' OR equipe = 'Toutes')
+       ORDER BY
+         CASE WHEN equipe = $1 THEN 0 ELSE 1 END,
+         created_at DESC
+       LIMIT 1`,
+      [scrEquipeFirst]
+    );
+    const templateZones = tplQ.rows[0]?.zones || [];
+    console.log(`[generate-resultat-weekend] template zones trouvées : ${templateZones.length}`);
+
+    // Construire zoneOverrides depuis les zones DB (1 match uniquement)
+    const zoneOverrides = {};
+    if (templateZones.length > 0 && matchesDB.length === 1) {
+      const m0       = matchesDB[0];
+      const scrOnLeft = m0.domicile !== false;
+
+      // Chercher les zones pertinentes par source ou label
+      const logoScrZone  = templateZones.find(z => z.source === 'logo_scr');
+      const logoDomZone  = templateZones.find(z => z.source === 'logo_domicile');
+      const logoExtZone  = templateZones.find(z => z.source === 'logo_exterieur');
+      const scorerZone   = templateZones.find(z =>
+        z.source === 'buteurs' ||
+        (z.label || '').toLowerCase().includes('buteur') ||
+        (z.label || '').toLowerCase().includes('scorer')
+      );
+
+      const ov = {};
+
+      // Logo gauche (équipe domicile dans l'image)
+      // logo_domicile prime sur logo_scr (si SCR est à gauche)
+      const leftZone = logoDomZone ?? (scrOnLeft ? logoScrZone : null);
+      if (leftZone?.x != null) {
+        ov.logoG = {
+          left: Math.round(leftZone.x),
+          top:  Math.round(leftZone.y),
+          w:    Math.round(leftZone.width  || 89),
+          h:    Math.round(leftZone.height || 89),
+        };
+      }
+
+      // Logo droite (équipe extérieure dans l'image)
+      const rightZone = logoExtZone ?? (!scrOnLeft ? logoScrZone : null);
+      if (rightZone?.x != null) {
+        ov.logoD = {
+          left: Math.round(rightZone.x),
+          top:  Math.round(rightZone.y),
+          w:    Math.round(rightZone.width  || 89),
+          h:    Math.round(rightZone.height || 89),
+        };
+      }
+
+      // Bloc buteurs : x → ancrage texte, y → première ligne
+      if (scorerZone?.x != null) {
+        if (scrOnLeft) {
+          // text-anchor="start" : x = bord gauche du bloc
+          ov.scorerX_dom = Math.round(scorerZone.x);
+        } else {
+          // text-anchor="end" : x = bord droit du bloc
+          ov.scorerX_ext = Math.round(scorerZone.x + (scorerZone.width || 0));
+        }
+        ov.scorerStartY = Math.round(scorerZone.y);
+      }
+
+      if (Object.keys(ov).length > 0) {
+        zoneOverrides[0] = ov;
+        console.log('[generate-resultat-weekend] zoneOverrides[0] :', JSON.stringify(ov));
+      }
+    }
+
     // Construire le tableau matches pour generateResultat
     const matches = await Promise.all(matchesDB.map(async (m) => {
       // Rechercher logo adversaire dans la table clubs (correspondance partielle sur le nom)
@@ -444,7 +606,7 @@ router.post('/generate-resultat-weekend', async (req, res) => {
         ? `${m.score_scr ?? 0} - ${m.score_adv ?? 0}`
         : `${m.score_adv ?? 0} - ${m.score_scr ?? 0}`;
 
-      // Formatage buteurs : "Nom Prénom [count]" (parse dans scorersNodes via regex)
+      // Formatage buteurs : "Nom Prénom [count]" (parse dans scorerTextNodes via regex)
       const buteursRaw = m.buteurs || [];
       const goalCount  = {};
       for (const b of buteursRaw) goalCount[b] = (goalCount[b] || 0) + 1;
@@ -453,17 +615,17 @@ router.post('/generate-resultat-weekend', async (req, res) => {
         .join('\n');
 
       return {
-        logoGauche: scrOnLeft ? scrLogo    : advLogoPath,
-        nomGauche:  scrOnLeft ? scrNom     : advNom,
+        logoGauche: scrOnLeft ? scrLogo     : advLogoPath,
+        nomGauche:  scrOnLeft ? scrNom      : advNom,
         score,
-        nomDroite:  scrOnLeft ? advNom     : scrNom,
+        nomDroite:  scrOnLeft ? advNom      : scrNom,
         logoDroite: scrOnLeft ? advLogoPath : scrLogo,
         scorers,
         domicile:   scrOnLeft,
       };
     }));
 
-    const url  = await generateResultat({ matches });
+    const url  = await generateResultat({ matches, zoneOverrides });
     const base = `http://localhost:${process.env.PORT || 3001}`;
     res.json({ success: true, url, full_url: base + url });
   } catch (err) {

@@ -71,6 +71,8 @@ export const generateMatchDay = (matchId, teamNumber) => api.post('/templates/ge
 export const generateResultatWeekend = (matchIds) => api.post('/templates/generate-resultat-weekend', { matchIds }, { timeout: 30000 });
 export const getScoreLiveTemplateStatus = () => api.get('/templates/score-live/status');
 export const getResultatsTemplateStatus = () => api.get('/templates/resultats/status');
+export const getPresetInfo           = ()             => api.get('/templates/preset-info');
+export const generatePresetPreview   = (type, variant) => api.post('/templates/preview-preset', { type, variant }, { timeout: 60000 });
 export const uploadScoreLiveTemplate = (num, formData) => api.post(`/templates/score-live/${num}`, formData, {
   headers: { 'Content-Type': 'multipart/form-data' },
   timeout: 60000,

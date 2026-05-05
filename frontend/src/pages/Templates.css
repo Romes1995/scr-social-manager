@@ -390,3 +390,160 @@
   .zones-layout { grid-template-columns: 1fr; }
   .zone-preview-container { position: static; }
 }
+
+/* ── Templates prédéfinis ─────────────────────────────────────────────────── */
+
+.preset-section {
+  margin-bottom: 8px;
+}
+
+.preset-section-header {
+  margin-bottom: 16px;
+}
+
+.preset-section-title {
+  font-size: 17px;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.06em;
+  margin-bottom: 2px;
+  color: var(--texte-principal);
+}
+
+.preset-section-subtitle {
+  font-size: 12px;
+  color: var(--texte-gris);
+}
+
+.preset-section-divider {
+  height: 1px;
+  background: var(--bordure);
+  margin: 28px 0 24px;
+}
+
+/* ── Meta ligne (badge + dimensions) ─────────────────────────────────────── */
+.preset-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px 8px;
+}
+
+.preset-dims {
+  font-size: 11px;
+  color: var(--texte-gris);
+  font-family: monospace;
+  letter-spacing: 0.02em;
+}
+
+/* ── Sélecteur variantes (1 match / 2 matchs …) ──────────────────────────── */
+.preset-variants {
+  display: flex;
+  gap: 4px;
+  padding: 0 14px 10px;
+  flex-wrap: wrap;
+}
+
+.preset-variant-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--bordure);
+  border-radius: 12px;
+  color: var(--texte-gris);
+  font-size: 11px;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  line-height: 1.4;
+}
+.preset-variant-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.preset-variant-btn.active {
+  background: rgba(26, 107, 60, 0.18);
+  border-color: var(--vert-primaire, #4ade80);
+  color: var(--texte-principal);
+}
+.preset-variant-btn.unavailable {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ── Visualiseur (image + overlay) ───────────────────────────────────────── */
+.preset-viewer {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.preset-no-template {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 6px;
+  font-size: 24px;
+  color: var(--texte-gris);
+  background: rgba(255, 255, 255, 0.03);
+}
+.preset-no-template small {
+  font-size: 12px;
+}
+
+/* Overlay conteneur */
+.preset-zone-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+/* Chaque rectangle de zone */
+.preset-zone-rect {
+  position: absolute;
+  border: 1px solid;
+  border-radius: 2px;
+  overflow: hidden;
+  cursor: default;
+  pointer-events: auto;
+  transition: opacity 0.1s;
+}
+.preset-zone-rect:hover {
+  z-index: 10;
+  opacity: 1 !important;
+}
+
+.preset-zone-rect--optional {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.preset-zone-label {
+  display: block;
+  font-size: 6.5px;
+  font-weight: 700;
+  padding: 1px 2px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.02em;
+}
+
+/* ── Aperçu généré (sous le viewer) ─────────────────────────────────────── */
+.preset-generated-preview {
+  padding: 8px 14px;
+  border-top: 1px solid var(--bordure);
+}
+
+.preset-generated-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--texte-gris);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
