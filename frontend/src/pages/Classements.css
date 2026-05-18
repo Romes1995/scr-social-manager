@@ -204,8 +204,8 @@
 }
 
 .cl-filter-tab {
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
+  background: #1a2118;        /* sombre explicite — pas de rgba blanc */
+  border: 1px solid #2d3d2a;
   border-radius: 8px;
   color: rgba(255,255,255,.55);
   cursor: pointer;
@@ -221,8 +221,9 @@
 }
 
 .cl-filter-tab:hover {
-  background: rgba(255,255,255,.1);
+  background: #243020;
   color: #fff;
+  border-color: #3a503a;
 }
 
 /* couleurs actives appliquées en inline (background, borderColor, color) */
