@@ -42,8 +42,9 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/matches/standings — bilan par équipe calculé depuis les matchs terminés
-router.get('/standings', async (req, res) => {
+// standingsHandler est exporté séparément pour être enregistré en route publique
+// (sans authenticateToken) dans index.js — la homepage l'appelle sans token
+async function standingsHandler(req, res) {
   try {
     const result = await pool.query(`
       SELECT
@@ -76,7 +77,9 @@ router.get('/standings', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
+
+router.get('/standings', standingsHandler);
 
 // GET /api/matches/top-scorers — meilleurs buteurs + photo joueur (LEFT JOIN joueurs)
 router.get('/top-scorers', async (req, res) => {
@@ -430,3 +433,4 @@ router.post('/generate-text', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.standingsHandler = standingsHandler;

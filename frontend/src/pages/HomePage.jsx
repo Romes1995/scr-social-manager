@@ -5,7 +5,7 @@ import photo2 from '../assets/photos/photo2.png';
 import photo3 from '../assets/photos/photo3.png';
 import photo4 from '../assets/photos/photo4.png';
 import photo5 from '../assets/photos/photo5.png';
-import { importFFF } from '../services/api';
+import api, { importFFF } from '../services/api';
 import TopNav from '../components/TopNav';
 import './HomePage.css';
 
@@ -289,9 +289,8 @@ function StandingCard({ teamNum }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/matches/standings`)
-      .then(r => r.json())
-      .then(rows => {
+    api.get('/matches/standings')
+      .then(({ data: rows }) => {
         const row = Array.isArray(rows) ? rows.find(r => r.equipe === teamName) : null;
         setData(row || fallback);
       })

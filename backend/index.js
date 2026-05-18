@@ -36,6 +36,10 @@ app.use('/assets',  express.static(path.join(__dirname, 'assets')));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/auth',   require('./routes/auth'));
 
+// /api/matches/standings est publique (homepage visible par les visiteurs non connectés)
+// Doit être enregistrée AVANT app.use('/api/matches', authenticateToken, ...)
+app.get('/api/matches/standings', require('./routes/matches').standingsHandler);
+
 // Health check (public)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'SCR Social Manager API', timestamp: new Date() });
