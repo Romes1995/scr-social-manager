@@ -60,6 +60,19 @@ CREATE TABLE IF NOT EXISTS publications_programmees (
   CONSTRAINT pub_statut_check CHECK (statut IN ('en_attente', 'publie', 'erreur'))
 );
 
+CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live', 'lecteur');
+
+CREATE TABLE IF NOT EXISTS users (
+  id            SERIAL PRIMARY KEY,
+  username      VARCHAR(50) NOT NULL UNIQUE,
+  password_hash TEXT        NOT NULL,
+  role          user_role   NOT NULL DEFAULT 'lecteur',
+  created_at    TIMESTAMP   DEFAULT NOW(),
+  last_login    TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+
 -- Index pour les performances
 CREATE INDEX IF NOT EXISTS idx_matches_date    ON matches(date);
 CREATE INDEX IF NOT EXISTS idx_matches_statut  ON matches(statut);

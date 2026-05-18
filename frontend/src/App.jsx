@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import TopNav from './components/TopNav';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
 import HomePage from './pages/HomePage';
 import Programme from './pages/Programme';
 import ScoreLive from './pages/ScoreLive';
@@ -8,32 +10,43 @@ import Templates from './pages/Templates';
 import Listes from './pages/Listes';
 import MatchDay from './pages/MatchDay';
 import ConvocationPreparator from './pages/ConvocationPreparator';
+import UsersAdmin from './pages/admin/UsersAdmin';
 import './App.css';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState('home');
-  const isHome = activeTab === 'home';
+const ADMIN     = ['admin'];
+const GESTION   = ['admin', 'gestionnaire'];
+const SCORE     = ['admin', 'gestionnaire', 'score_live'];
+const CONVOC    = ['admin', 'gestionnaire', 'coach'];
 
-  const renderPage = () => {
-    switch (activeTab) {
-      case 'home':        return <HomePage activeTab={activeTab} setActiveTab={setActiveTab} />;
-      case 'programme':   return <Programme />;
-      case 'score_live':  return <ScoreLive />;
-      case 'resultats':   return <Resultats />;
-      case 'templates':   return <Templates />;
-      case 'listes':      return <Listes />;
-      case 'matchday':    return <MatchDay />;
-      case 'convocation': return <ConvocationPreparator />;
-      default:            return <HomePage activeTab={activeTab} setActiveTab={setActiveTab} />;
-    }
-  };
+export default function App() {
+  const location = useLocation();
+  const isHome  = location.pathname === '/';
+  const isLogin = location.pathname === '/login';
 
   return (
     <div className={`app${isHome ? ' app--dark' : ''}`}>
-      {/* TopNav persistant pour toutes les pages sauf l'accueil (qui a son propre nav) */}
-      {!isHome && <TopNav activeTab={activeTab} setActiveTab={setActiveTab} />}
+      {!isHome && !isLogin && <TopNav />}
       <main className={`main-content${isHome ? ' main-content--home' : ''}`}>
-        {renderPage()}
+        <Routes>
+          <Route path="/login" element={<Login />} />
+
+          {/* Pages publiques */}
+          <Route path="/" element={<HomePage />} />
+
+          {/* Pages protégées */}
+          <Route path="/programme"   element={<ProtectedRoute roles={GESTION}><Programme /></ProtectedRoute>} />
+          <Route path="/score-live"  element={<ProtectedRoute roles={SCORE}><ScoreLive /></ProtectedRoute>} />
+          <Route path="/resultats"   element={<ProtectedRoute roles={GESTION}><Resultats /></ProtectedRoute>} />
+          <Route path="/templates"   element={<ProtectedRoute roles={GESTION}><Templates /></ProtectedRoute>} />
+          <Route path="/listes"      element={<ProtectedRoute roles={GESTION}><Listes /></ProtectedRoute>} />
+          <Route path="/matchday"    element={<ProtectedRoute roles={GESTION}><MatchDay /></ProtectedRoute>} />
+          <Route path="/convocation" element={<ProtectedRoute roles={CONVOC}><ConvocationPreparator /></ProtectedRoute>} />
+
+          {/* Admin */}
+          <Route path="/admin/users" element={<ProtectedRoute roles={ADMIN}><UsersAdmin /></ProtectedRoute>} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
     </div>
   );

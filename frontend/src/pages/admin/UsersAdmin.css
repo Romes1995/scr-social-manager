@@ -1,0 +1,220 @@
+.ua-page {
+  padding: 2rem;
+  max-width: 960px;
+  margin: 0 auto;
+  color: #fff;
+}
+
+.ua-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.ua-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem;
+}
+
+.ua-subtitle {
+  color: rgba(255,255,255,.45);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* Buttons */
+.ua-btn {
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.ua-btn:hover:not(:disabled) { opacity: .85; }
+.ua-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ua-btn--primary { background: #4ac878; color: #fff; }
+.ua-btn--danger  { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.35); }
+
+/* Create form */
+.ua-create-form {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ua-form-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+  color: #4ac878;
+}
+
+.ua-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 640px) {
+  .ua-form-row { grid-template-columns: 1fr; }
+}
+
+.ua-field {
+  display: flex;
+  flex-direction: column;
+  gap: .375rem;
+}
+
+.ua-field label {
+  color: rgba(255,255,255,.6);
+  font-size: .8rem;
+  font-weight: 500;
+}
+
+.ua-field input,
+.ua-field select {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 7px;
+  color: #fff;
+  font-size: .9rem;
+  padding: .5rem .75rem;
+  outline: none;
+}
+
+.ua-field input:focus,
+.ua-field select:focus { border-color: #4ac878; }
+
+.ua-field select option { background: #1a2840; }
+
+/* Table */
+.ua-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.ua-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .9rem;
+}
+
+.ua-table thead th {
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.55);
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .05em;
+  padding: .875rem 1rem;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ua-table tbody tr {
+  border-top: 1px solid rgba(255,255,255,.05);
+  transition: background .12s;
+}
+
+.ua-table tbody tr:hover { background: rgba(255,255,255,.03); }
+.ua-row--me { background: rgba(74,200,120,.04) !important; }
+
+.ua-table td {
+  padding: .875rem 1rem;
+  vertical-align: middle;
+}
+
+.ua-username {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.ua-me-badge {
+  background: rgba(74,200,120,.2);
+  color: #4ac878;
+  border-radius: 4px;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: .1rem .4rem;
+}
+
+.ua-role-badge {
+  border: 1px solid;
+  border-radius: 5px;
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .2rem .6rem;
+}
+
+.ua-role-select {
+  background: rgba(255,255,255,.07);
+  border: 1px solid;
+  border-radius: 7px;
+  color: #fff;
+  font-size: .85rem;
+  padding: .3rem .6rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.ua-role-select option { background: #1a2840; }
+
+.ua-date { color: rgba(255,255,255,.5); font-size: .85rem; }
+
+/* Error */
+.ua-error {
+  background: rgba(239,68,68,.12);
+  border: 1px solid rgba(239,68,68,.3);
+  border-radius: 8px;
+  color: #fca5a5;
+  padding: .75rem 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Loading */
+.ua-loading {
+  display: flex;
+  justify-content: center;
+  padding: 3rem;
+}
+
+.ua-spin {
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(255,255,255,.15);
+  border-top-color: #4ac878;
+  border-radius: 50%;
+  animation: ua-rotate .7s linear infinite;
+}
+
+@keyframes ua-rotate { to { transform: rotate(360deg); } }
+
+/* Toast */
+.ua-toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  border-radius: 8px;
+  font-size: .875rem;
+  font-weight: 500;
+  padding: .75rem 1.25rem;
+  z-index: 9999;
+  animation: ua-fadein .2s ease;
+}
+
+.ua-toast--ok  { background: #14532d; color: #86efac; border: 1px solid #16a34a44; }
+.ua-toast--err { background: #450a0a; color: #fca5a5; border: 1px solid #dc262644; }
+
+@keyframes ua-fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

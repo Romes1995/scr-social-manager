@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import photo1 from '../assets/photos/photo1.png';
 import photo2 from '../assets/photos/photo2.png';
 import photo3 from '../assets/photos/photo3.png';
@@ -90,7 +91,13 @@ function initials(name = '') {
 
 // ── HeroSlider ────────────────────────────────────────────────────────────────
 
-function HeroSlider({ setActiveTab, onImport }) {
+const TAB_PATH = {
+  home: '/', programme: '/programme', matchday: '/matchday',
+  convocation: '/convocation', resultats: '/resultats',
+  score_live: '/score-live', templates: '/templates', listes: '/listes',
+};
+
+function HeroSlider({ navigate, onImport }) {
   const [cur,     setCur]     = useState(0);
   const [paused,  setPaused]  = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -113,7 +120,7 @@ function HeroSlider({ setActiveTab, onImport }) {
 
   const handleCta = (cta) => {
     if (cta.action === 'import') { onImport(); return; }
-    if (cta.tab) setActiveTab(cta.tab);
+    if (cta.tab) navigate(TAB_PATH[cta.tab] ?? '/');
   };
 
   return (
@@ -454,7 +461,8 @@ function TopScorersCarousel() {
 
 // ── HomePage ──────────────────────────────────────────────────────────────────
 
-export default function HomePage({ activeTab, setActiveTab }) {
+export default function HomePage() {
+  const navigate = useNavigate();
   const [matches,  setMatches]  = useState([]);
   const [mLoading, setMLoading] = useState(true);
   const [importing, setImporting] = useState(false);
@@ -486,10 +494,10 @@ export default function HomePage({ activeTab, setActiveTab }) {
   return (
     <div className="hp">
       {/* ── Topnav ── */}
-      <TopNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <TopNav />
 
       {/* ── Hero ── */}
-      <HeroSlider setActiveTab={setActiveTab} onImport={doImport} />
+      <HeroSlider navigate={navigate} onImport={doImport} />
 
       {/* ── Matchs ── */}
       <section className="hp-sec">
@@ -498,7 +506,7 @@ export default function HomePage({ activeTab, setActiveTab }) {
             <h2 className="hp-sec-title">
               <span className="hp-accent">▮</span> Prochains matchs
             </h2>
-            <button className="hp-more" onClick={() => setActiveTab('programme')}>
+            <button className="hp-more" onClick={() => navigate('/programme')}>
               Tout voir →
             </button>
           </header>
@@ -537,11 +545,11 @@ export default function HomePage({ activeTab, setActiveTab }) {
         <div className="hp-footer-stats">
           <span>3 équipes</span>
           <span className="hp-footer-sep">·</span>
-          <span onClick={() => setActiveTab('templates')} style={{ cursor: 'pointer' }}>
+          <span onClick={() => navigate('/templates')} style={{ cursor: 'pointer' }}>
             Templates
           </span>
           <span className="hp-footer-sep">·</span>
-          <span onClick={() => setActiveTab('resultats')} style={{ cursor: 'pointer' }}>
+          <span onClick={() => navigate('/resultats')} style={{ cursor: 'pointer' }}>
             Publications
           </span>
         </div>

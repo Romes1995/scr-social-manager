@@ -9,10 +9,22 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Intercepteur pour logger les erreurs
+// Injecte le JWT dans chaque requête
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('scr_token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+// 401 → déconnexion + redirect login
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    if (err.response?.status === 401 && !err.config?.url?.includes('/auth/login')) {
+      localStorage.removeItem('scr_token');
+      localStorage.removeItem('scr_user');
+      window.location.href = '/login';
+    }
     console.error('[API Error]', err.config?.url, err.response?.data || err.message);
     return Promise.reject(err);
   }
@@ -120,5 +132,15 @@ export const publishFacebook = (data) => api.post('/publish/facebook', data);
 export const publishInstagram = (data) => api.post('/publish/instagram', data);
 export const publishBoth = (data) => api.post('/publish/both', data);
 export const getPublications = () => api.get('/publish/programmes');
+
+// --- Auth ---
+export const loginUser      = (data)       => api.post('/auth/login', data);
+export const getMe          = ()           => api.get('/auth/me');
+
+// --- Users (admin) ---
+export const getUsers       = ()           => api.get('/users');
+export const createUser     = (data)       => api.post('/users', data);
+export const updateUserRole = (id, role)   => api.put(`/users/${id}`, { role });
+export const deleteUser     = (id)         => api.delete(`/users/${id}`);
 
 export default api;
