@@ -133,6 +133,10 @@ export const publishInstagram = (data) => api.post('/publish/instagram', data);
 export const publishBoth = (data) => api.post('/publish/both', data);
 export const getPublications = () => api.get('/publish/programmes');
 
+// --- Public (pas de token requis) ---
+export const getClassementParEquipe = (params) => api.get('/public/classement-par-equipe', { params });
+export const getButeursParEquipe    = ()        => api.get('/public/buteurs-par-equipe');
+
 // --- Auth ---
 export const loginUser      = (data)       => api.post('/auth/login', data);
 export const getMe          = ()           => api.get('/auth/me');

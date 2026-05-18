@@ -5,7 +5,7 @@ import photo2 from '../assets/photos/photo2.png';
 import photo3 from '../assets/photos/photo3.png';
 import photo4 from '../assets/photos/photo4.png';
 import photo5 from '../assets/photos/photo5.png';
-import api, { importFFF } from '../services/api';
+import api, { importFFF, getClassementParEquipe } from '../services/api';
 import TopNav from '../components/TopNav';
 import './HomePage.css';
 
@@ -279,7 +279,7 @@ function MatchCard({ match }) {
 
 // ── StandingCard ──────────────────────────────────────────────────────────────
 
-function StandingCard({ teamNum }) {
+function StandingCard({ teamNum, divisionRows, divisionName }) {
   const teamName = `SCR ${teamNum}`;
   const color    = TEAM_COLOR[teamName];
   const fallback = { equipe: teamName, joues:0, victoires:0, nuls:0, defaites:0,
@@ -306,7 +306,7 @@ function StandingCard({ teamNum }) {
       <div className="sc-header">
         <div>
           <div className="sc-team">{teamName}</div>
-          <div className="sc-div">{d.division || TEAM_DIV[teamName]}</div>
+          <div className="sc-div">{divisionName || d.division || TEAM_DIV[teamName]}</div>
         </div>
         <div className="sc-pts">{loading ? '—' : d.points}<span>pts</span></div>
       </div>
@@ -339,6 +339,43 @@ function StandingCard({ teamNum }) {
               {[...d.forme].reverse().map((r, i) => (
                 <span key={i} className={`sc-dot sc-dot--${r}`}>{r}</span>
               ))}
+            </div>
+          )}
+
+          {/* Classement complet de la division */}
+          {divisionRows && divisionRows.length > 0 && (
+            <div className="sc-classement">
+              <div className="sc-classement-title">Classement division</div>
+              <div className="sc-classement-scroll">
+                <table className="sc-classement-table">
+                  <thead>
+                    <tr>
+                      <th>#</th><th>Équipe</th>
+                      <th>Pts</th><th>J</th><th>V</th><th>N</th><th>D</th>
+                      <th>Bp</th><th>Bc</th><th>Diff</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {divisionRows.map((row, i) => (
+                      <tr key={row.equipe} className={row.isSCR ? 'sc-classement-scr' : ''}
+                          style={row.isSCR ? { '--rc': color } : {}}>
+                        <td className="sc-cl-rank">{i + 1}</td>
+                        <td className="sc-cl-name" title={row.equipe}>{row.equipe}</td>
+                        <td className="sc-cl-num sc-cl-pts">{row.points}</td>
+                        <td className="sc-cl-num">{row.joues}</td>
+                        <td className="sc-cl-num">{row.victoires}</td>
+                        <td className="sc-cl-num">{row.nuls}</td>
+                        <td className="sc-cl-num">{row.defaites}</td>
+                        <td className="sc-cl-num">{row.buts_pour}</td>
+                        <td className="sc-cl-num">{row.buts_contre}</td>
+                        <td className={`sc-cl-num sc-cl-diff${row.diff > 0 ? ' sc-cl-diff--pos' : row.diff < 0 ? ' sc-cl-diff--neg' : ''}`}>
+                          {row.diff > 0 ? `+${row.diff}` : row.diff}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
@@ -382,9 +419,8 @@ function TopScorersCarousel() {
   const [paused,  setPaused]  = useState(false);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/matches/top-scorers?limit=6`)
-      .then(r => r.json())
-      .then(rows => setScorers(Array.isArray(rows) ? rows : []))
+    api.get('/matches/top-scorers?limit=6')
+      .then(({ data: rows }) => setScorers(Array.isArray(rows) ? rows : []))
       .catch(() => setScorers([]))
       .finally(() => setLoading(false));
   }, []);
@@ -462,10 +498,11 @@ function TopScorersCarousel() {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const [matches,  setMatches]  = useState([]);
-  const [mLoading, setMLoading] = useState(true);
-  const [importing, setImporting] = useState(false);
-  const [toast,    setToast]    = useState(null);
+  const [matches,     setMatches]     = useState([]);
+  const [mLoading,    setMLoading]    = useState(true);
+  const [importing,   setImporting]   = useState(false);
+  const [toast,       setToast]       = useState(null);
+  const [classement,  setClassement]  = useState({});
 
   useEffect(() => {
     setMLoading(true);
@@ -474,6 +511,12 @@ export default function HomePage() {
       .then(rows => setMatches(Array.isArray(rows) ? rows : []))
       .catch(() => setMatches([]))
       .finally(() => setMLoading(false));
+  }, []);
+
+  useEffect(() => {
+    getClassementParEquipe()
+      .then(({ data }) => setClassement(data || {}))
+      .catch(() => {});
   }, []);
 
   const doImport = async () => {
@@ -530,9 +573,9 @@ export default function HomePage() {
             </h2>
           </header>
           <div className="hp-info-grid">
-            <StandingCard teamNum={1} />
-            <StandingCard teamNum={2} />
-            <StandingCard teamNum={3} />
+            <StandingCard teamNum={1} divisionRows={classement['SCR 1']?.rows} divisionName={classement['SCR 1']?.division} />
+            <StandingCard teamNum={2} divisionRows={classement['SCR 2']?.rows} divisionName={classement['SCR 2']?.division} />
+            <StandingCard teamNum={3} divisionRows={classement['SCR 3']?.rows} divisionName={classement['SCR 3']?.division} />
             <TopScorersCarousel />
           </div>
         </div>

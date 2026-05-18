@@ -8,14 +8,15 @@ const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://lo
 
 // Mapping tab id → path
 const TAB_PATH = {
-  home:       '/',
-  programme:  '/programme',
-  matchday:   '/matchday',
-  convocation:'/convocation',
-  resultats:  '/resultats',
-  score_live: '/score-live',
-  templates:  '/templates',
-  listes:     '/listes',
+  home:        '/',
+  programme:   '/programme',
+  matchday:    '/matchday',
+  convocation: '/convocation',
+  resultats:   '/resultats',
+  score_live:  '/score-live',
+  classements: '/classements',
+  templates:   '/templates',
+  listes:      '/listes',
 };
 
 // Mapping path → groupe actif
@@ -26,6 +27,7 @@ function activeGroupFromPath(pathname) {
     '/convocation': 'generations',
     '/resultats':   'generations',
     '/score-live':  'score_live',
+    '/classements': 'classements',
     '/templates':   'gestion',
     '/listes':      'gestion',
     '/admin/users': 'admin',
@@ -51,7 +53,8 @@ const NAV_GROUPS = [
       { id: 'resultats',    label: 'Résultats',  icon: '🏆', roles: ['admin','gestionnaire'] },
     ],
   },
-  { id: 'score_live', label: 'Score Live', roles: ['admin','gestionnaire','score_live'] },
+  { id: 'score_live',  label: 'Score Live',   roles: ['admin','gestionnaire','score_live'] },
+  { id: 'classements', label: 'Classements' },
   {
     id: 'gestion', label: 'Gestion',
     children: [

@@ -81,8 +81,8 @@ async function standingsHandler(req, res) {
 
 router.get('/standings', standingsHandler);
 
-// GET /api/matches/top-scorers — meilleurs buteurs + photo joueur (LEFT JOIN joueurs)
-router.get('/top-scorers', async (req, res) => {
+// topScorersHandler exporté séparément pour route publique (homepage sans token)
+async function topScorersHandler(req, res) {
   try {
     const lim = Math.min(Math.max(parseInt(req.query.limit) || 10, 1), 50);
     const result = await pool.query(`
@@ -107,7 +107,9 @@ router.get('/top-scorers', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+}
+
+router.get('/top-scorers', topScorersHandler);
 
 // GET /api/matches/:id
 router.get('/:id', async (req, res) => {
@@ -433,4 +435,5 @@ router.post('/generate-text', async (req, res) => {
 });
 
 module.exports = router;
-module.exports.standingsHandler = standingsHandler;
+module.exports.standingsHandler   = standingsHandler;
+module.exports.topScorersHandler  = topScorersHandler;

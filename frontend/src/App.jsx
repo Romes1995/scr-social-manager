@@ -11,6 +11,7 @@ import Templates from './pages/Templates';
 import Listes from './pages/Listes';
 import MatchDay from './pages/MatchDay';
 import ConvocationPreparator from './pages/ConvocationPreparator';
+import Classements from './pages/Classements';
 import UsersAdmin from './pages/admin/UsersAdmin';
 import './App.css';
 
@@ -54,6 +55,9 @@ export default function App() {
           <Route path="/listes"      element={<ProtectedRoute roles={GESTION}><Listes /></ProtectedRoute>} />
           <Route path="/matchday"    element={<ProtectedRoute roles={GESTION}><MatchDay /></ProtectedRoute>} />
           <Route path="/convocation" element={<ProtectedRoute roles={CONVOC}><ConvocationPreparator /></ProtectedRoute>} />
+
+          {/* Classements — tous les rôles authentifiés */}
+          <Route path="/classements" element={<ProtectedRoute><Classements /></ProtectedRoute>} />
 
           {/* Admin */}
           <Route path="/admin/users" element={<ProtectedRoute roles={ADMIN}><UsersAdmin /></ProtectedRoute>} />

@@ -1,0 +1,286 @@
+.cl-page {
+  min-height: 100vh;
+  background: #0a0f0d;
+  color: #fff;
+  padding: 2rem 1.5rem;
+}
+
+.cl-page-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.cl-page-title {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #3dff6e;
+  margin: 0 0 .25rem;
+}
+
+.cl-page-sub {
+  color: rgba(255,255,255,.35);
+  font-size: .8rem;
+  margin: 0 0 2rem;
+}
+
+/* ── Division tables grid ──────────────────────────────────────────────────── */
+.cl-divisions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+@media (max-width: 1024px) { .cl-divisions { grid-template-columns: 1fr; } }
+
+/* ── Card ──────────────────────────────────────────────────────────────────── */
+.cl-card {
+  background: #0f1812;
+  border: 1px solid rgba(255,255,255,.07);
+  border-top: 2px solid var(--tc, #3dff6e);
+  border-radius: 12px;
+  padding: 1.25rem;
+  overflow: hidden;
+}
+
+.cl-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.cl-card-team {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-bottom: .2rem;
+}
+
+.cl-card-div {
+  font-size: .75rem;
+  color: rgba(255,255,255,.4);
+}
+
+.cl-card-count {
+  font-size: .7rem;
+  color: rgba(255,255,255,.3);
+  white-space: nowrap;
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────────── */
+.cl-table-wrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.1) transparent;
+}
+
+.cl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .78rem;
+}
+
+.cl-table thead th {
+  color: rgba(255,255,255,.3);
+  font-size: .65rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  padding: 4px 5px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cl-th-name { text-align: left !important; }
+
+.cl-table tbody tr {
+  border-top: 1px solid rgba(255,255,255,.04);
+  transition: background .1s;
+}
+
+.cl-table tbody tr:hover { background: rgba(255,255,255,.03); }
+
+.cl-row-scr {
+  background: color-mix(in srgb, var(--tc, #3dff6e) 10%, transparent) !important;
+}
+
+.cl-td-rank {
+  color: rgba(255,255,255,.25);
+  padding: 6px 5px;
+  text-align: right;
+  width: 18px;
+  font-size: .7rem;
+}
+
+.cl-td-name {
+  padding: 6px 5px;
+  text-align: left;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: rgba(255,255,255,.7);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cl-row-scr .cl-td-name {
+  color: var(--tc, #3dff6e);
+  font-weight: 700;
+}
+
+.cl-scr-dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+.cl-td-num {
+  text-align: right;
+  padding: 6px 5px;
+  color: rgba(255,255,255,.55);
+}
+
+.cl-td-pts {
+  font-weight: 700;
+  color: rgba(255,255,255,.9) !important;
+}
+
+.cl-td-scr-pts { color: var(--tc, #3dff6e) !important; }
+
+.cl-td-diff.pos { color: #3dff6e !important; }
+.cl-td-diff.neg { color: #f87171 !important; }
+
+/* ── Loaders ──────────────────────────────────────────────────────────────── */
+.cl-loader {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.cl-spin {
+  width: 28px;
+  height: 28px;
+  border: 2.5px solid rgba(255,255,255,.12);
+  border-top-color: #3dff6e;
+  border-radius: 50%;
+  animation: cl-rotate .7s linear infinite;
+}
+
+@keyframes cl-rotate { to { transform: rotate(360deg); } }
+
+.cl-empty {
+  color: rgba(255,255,255,.3);
+  font-size: .85rem;
+  padding: .5rem 0;
+}
+
+/* ── Section top buteurs ──────────────────────────────────────────────────── */
+.cl-buteurs {
+  background: #0f1812;
+  border: 1px solid rgba(255,255,255,.07);
+  border-top: 2px solid #3dff6e;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.cl-buteurs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cl-section-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin: 0;
+  color: #3dff6e;
+}
+
+.cl-filter-tabs {
+  display: flex;
+  gap: .375rem;
+}
+
+.cl-filter-tab {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 6px;
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  font-size: .78rem;
+  font-weight: 600;
+  padding: .3rem .7rem;
+  transition: all .15s;
+}
+
+.cl-filter-tab:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+.cl-filter-tab--on {
+  background: rgba(61,255,110,.15);
+  border-color: rgba(61,255,110,.4);
+  color: #3dff6e;
+}
+
+.cl-buteurs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: .625rem;
+}
+
+.cl-scorer {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 8px;
+  padding: .625rem .875rem;
+}
+
+.cl-scorer-rank {
+  font-size: .85rem;
+  font-weight: 800;
+  min-width: 28px;
+}
+
+.cl-scorer-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cl-scorer-name {
+  font-size: .875rem;
+  font-weight: 600;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-scorer-team {
+  font-size: .7rem;
+  font-weight: 500;
+}
+
+.cl-scorer-buts {
+  font-size: 1.25rem;
+  font-weight: 800;
+  text-align: right;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.cl-scorer-buts-label {
+  font-size: .6rem;
+  font-weight: 500;
+  color: rgba(255,255,255,.4);
+}

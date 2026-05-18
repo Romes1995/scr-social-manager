@@ -500,6 +500,69 @@
 .sc-dot--N { background:rgba(245,197,24,.15);  color:#f5c518; border:1px solid rgba(245,197,24,.35); }
 .sc-dot--D { background:rgba(248,113,113,.15); color:#f87171; border:1px solid rgba(248,113,113,.35); }
 
+/* ── Classement division dans StandingCard ───────────────────────────────── */
+.sc-classement {
+  margin-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  padding-top: 10px;
+}
+.sc-classement-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.35);
+  margin-bottom: 8px;
+}
+.sc-classement-scroll {
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.1) transparent;
+}
+.sc-classement-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+.sc-classement-table thead th {
+  color: rgba(255,255,255,.3);
+  font-weight: 600;
+  padding: 3px 4px;
+  text-align: right;
+  white-space: nowrap;
+}
+.sc-classement-table thead th:nth-child(2) { text-align: left; }
+.sc-classement-table tbody tr {
+  border-top: 1px solid rgba(255,255,255,.04);
+}
+.sc-classement-table tbody tr:hover { background: rgba(255,255,255,.03); }
+.sc-classement-scr {
+  background: color-mix(in srgb, var(--rc, #4ac878) 12%, transparent) !important;
+  border-radius: 3px;
+}
+.sc-cl-rank {
+  color: rgba(255,255,255,.3);
+  padding: 5px 4px;
+  text-align: right;
+  width: 16px;
+}
+.sc-cl-name {
+  padding: 5px 4px;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: rgba(255,255,255,.75);
+}
+.sc-classement-scr .sc-cl-name { color: var(--rc, #4ac878); font-weight: 700; }
+.sc-cl-num  { text-align: right; padding: 5px 4px; color: rgba(255,255,255,.6); }
+.sc-cl-pts  { font-weight: 700; color: rgba(255,255,255,.9) !important; }
+.sc-classement-scr .sc-cl-pts  { color: var(--rc, #4ac878) !important; }
+.sc-cl-diff--pos { color: #4ac878 !important; }
+.sc-cl-diff--neg { color: #f87171 !important; }
+
 /* ── ClubLogo fallback (initiales) ──────────────────────────────────────── */
 .club-logo-fallback {
   display: flex;

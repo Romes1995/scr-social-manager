@@ -36,9 +36,11 @@ app.use('/assets',  express.static(path.join(__dirname, 'assets')));
 app.use('/api/public', require('./routes/public'));
 app.use('/api/auth',   require('./routes/auth'));
 
-// /api/matches/standings est publique (homepage visible par les visiteurs non connectés)
-// Doit être enregistrée AVANT app.use('/api/matches', authenticateToken, ...)
-app.get('/api/matches/standings', require('./routes/matches').standingsHandler);
+// Ces routes sont publiques (homepage visible par les visiteurs non connectés)
+// Doivent être enregistrées AVANT app.use('/api/matches', authenticateToken, ...)
+const matchesRoutes = require('./routes/matches');
+app.get('/api/matches/standings',   matchesRoutes.standingsHandler);
+app.get('/api/matches/top-scorers', matchesRoutes.topScorersHandler);
 
 // Health check (public)
 app.get('/api/health', (req, res) => {
