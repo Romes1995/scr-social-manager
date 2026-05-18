@@ -318,4 +318,111 @@ router.get('/carousel/:teamId', async (req, res) => {
   }
 });
 
+// GET /api/public/vitrine/:teamId — données pour le layout 3 colonnes
+router.get('/vitrine/:teamId', async (req, res) => {
+  const num = parseInt(req.params.teamId, 10);
+  if (![1, 2, 3].includes(num)) {
+    return res.status(400).json({ error: 'teamId doit être 1, 2 ou 3' });
+  }
+  const equipe = `SCR ${num}`;
+
+  try {
+    // Meilleur buteur de l'équipe
+    const topScorerRes = await pool.query(`
+      SELECT
+        sub.buteur AS nom,
+        COUNT(*)::int AS buts,
+        (SELECT j.photo FROM joueurs j
+         WHERE LOWER(TRIM(j.prenom || ' ' || j.nom)) = LOWER(TRIM(sub.buteur))
+            OR LOWER(TRIM(j.nom    || ' ' || j.prenom)) = LOWER(TRIM(sub.buteur))
+         LIMIT 1) AS photo,
+        (SELECT j.categorie FROM joueurs j
+         WHERE LOWER(TRIM(j.prenom || ' ' || j.nom)) = LOWER(TRIM(sub.buteur))
+            OR LOWER(TRIM(j.nom    || ' ' || j.prenom)) = LOWER(TRIM(sub.buteur))
+         LIMIT 1) AS categorie
+      FROM (
+        SELECT UNNEST(buteurs) AS buteur
+        FROM matches
+        WHERE equipe = $1 AND statut = 'termine' AND cardinality(buteurs) > 0
+      ) sub
+      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> ''
+      GROUP BY sub.buteur
+      ORDER BY buts DESC
+      LIMIT 1
+    `, [equipe]);
+
+    const topScorer = topScorerRes.rows[0] || null;
+
+    // Matchs du meilleur buteur avec nb buts par match (compté depuis le tableau)
+    let scorerMatchs = [];
+    if (topScorer) {
+      const matchsRes = await pool.query(`
+        SELECT
+          m.adversaire,
+          m.date,
+          m.heure,
+          m.division,
+          m.domicile,
+          m.score_scr,
+          m.score_adv,
+          (SELECT COUNT(*) FROM UNNEST(m.buteurs) AS b
+           WHERE LOWER(TRIM(b)) = LOWER(TRIM($2)))::int AS nb_buts
+        FROM matches m
+        WHERE m.equipe = $1
+          AND m.statut = 'termine'
+          AND EXISTS (
+            SELECT 1 FROM UNNEST(m.buteurs) AS b
+            WHERE LOWER(TRIM(b)) = LOWER(TRIM($2))
+          )
+        ORDER BY m.date DESC
+      `, [equipe, topScorer.nom]);
+      scorerMatchs = matchsRes.rows;
+    }
+
+    const [lastRes, nextRes] = await Promise.all([
+      pool.query(`
+        SELECT m.*,
+          (SELECT c.logo_url FROM clubs c
+           WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
+           LIMIT 1) AS logo_adversaire_local
+        FROM matches m
+        WHERE m.equipe = $1 AND m.statut = 'termine'
+        ORDER BY m.date DESC, m.heure DESC NULLS LAST
+        LIMIT 1
+      `, [equipe]),
+      pool.query(`
+        SELECT m.*,
+          (SELECT c.logo_url FROM clubs c
+           WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
+           LIMIT 1) AS logo_adversaire_local
+        FROM matches m
+        WHERE m.equipe = $1 AND m.statut = 'programme' AND m.date >= CURRENT_DATE
+        ORDER BY m.date ASC, m.heure ASC NULLS LAST
+        LIMIT 1
+      `, [equipe]),
+    ]);
+
+    let ranking = null;
+    try {
+      const scraped = await getClassementFFF();
+      ranking = (scraped[equipe]?.rows?.length > 0)
+        ? scraped[equipe]
+        : await classementFromDB(equipe);
+    } catch {
+      ranking = await classementFromDB(equipe);
+    }
+
+    res.json({
+      equipe,
+      ranking,
+      lastResult:      lastRes.rows[0] || null,
+      nextMatch:       nextRes.rows[0] || null,
+      meilleurButeur:  topScorer ? { ...topScorer, matchs: scorerMatchs } : null,
+    });
+  } catch (err) {
+    console.error('[vitrine]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -278,6 +278,38 @@ async function generateFromTemplate(templateId, matchId, textesFixe = {}) {
       imageLayers.push({ input: buf, left: zX, top: zY, blend: 'over' });
       console.log(`[templateGenerator] logo "${zone.source}" → left=${zX} top=${zY} ${zW}×${zH}`);
 
+    } else if (zoneType === 'image_statique') {
+      // ── Asset statique (fichier local fixe, ex: ballon.png) ──
+      const ASSETS_DIR = path.join(BACKEND, 'uploads', 'assets');
+      let assetPath = null;
+      if (zone.source === 'ballon_buteur') {
+        assetPath = path.join(ASSETS_DIR, 'ballon.png');
+      } else if (zone.source?.startsWith('/uploads/')) {
+        assetPath = path.join(BACKEND, zone.source);
+      }
+
+      if (!assetPath || !fs.existsSync(assetPath)) {
+        console.warn(`[templateGenerator] image_statique "${zone.source}" introuvable — ignorée`);
+        continue;
+      }
+
+      let buf = await loadLocalLogo(assetPath, zW, zH);
+      if (!buf) { console.warn(`[templateGenerator] image_statique chargement échoué : ${assetPath}`); continue; }
+
+      const maxAvailW = W - zX;
+      const maxAvailH = H - zY;
+      if (maxAvailW <= 0 || maxAvailH <= 0) continue;
+      if (zW > maxAvailW || zH > maxAvailH) {
+        try {
+          buf = await sharp(buf)
+            .extract({ left: 0, top: 0, width: Math.min(zW, maxAvailW), height: Math.min(zH, maxAvailH) })
+            .toBuffer();
+        } catch { continue; }
+      }
+
+      imageLayers.push({ input: buf, left: zX, top: zY, blend: 'over' });
+      console.log(`[templateGenerator] image_statique "${zone.source}" → left=${zX} top=${zY} ${zW}×${zH}`);
+
     } else if (zoneType === 'texte_dynamique') {
       // ── Texte dynamique ──
       const text = resolveText(zone.source, match);

@@ -1,0 +1,406 @@
+/* ── Vitrine 3-column grid ───────────────────────────────────────────────── */
+
+.vg-section {
+  padding: 16px 16px 48px;
+}
+
+.vg-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* ── Colonnes ─────────────────────────────────────────────────────────────── */
+
+.vg-col {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Colonne du milieu : conteneur transparent, les cartes ont leur propre fond */
+.vg-col--middle {
+  background: transparent;
+  border: none;
+  padding: 0;
+  gap: 12px;
+}
+
+.vg-col-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.vg-division {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Classement (col 1) ───────────────────────────────────────────────────── */
+
+.vg-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.vg-table thead th {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 6px 8px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.vg-th-rank { min-width: 24px; }
+.vg-th-r    { text-align: right !important; }
+
+.vg-table tbody tr {
+  border-top: 0.5px solid var(--border);
+}
+
+.vg-table tbody td {
+  padding: 5px 6px;
+  white-space: nowrap;
+}
+
+.vg-rank      { color: var(--text-faint); font-size: 12px; min-width: 22px; }
+.vg-club-name { width: 100%; font-size: 13px; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
+.vg-r         { text-align: right; font-size: 12px; }
+.vg-diff      { font-size: 11px; color: var(--text-muted); }
+.vg-diff.pos  { color: #4ade80; }
+.vg-diff.neg  { color: #ef4444; }
+
+/* Barre de montée (vert) */
+.vg-row--promo td:first-child {
+  border-left: 3px solid #22c55e;
+  padding-left: 9px;
+}
+
+/* Barre de relégation (rouge) */
+.vg-row--releg td:first-child {
+  border-left: 3px solid #ef4444;
+  padding-left: 9px;
+}
+
+/* SCR surligné en bleu */
+.vg-row--scr {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.vg-row--scr td {
+  color: #93c5fd;
+}
+
+.vg-row--scr .vg-rank {
+  color: #60a5fa;
+}
+
+.vg-row--scr td:first-child {
+  border-left: 3px solid #3b82f6 !important;
+  padding-left: 9px;
+}
+
+/* ── Légende ─────────────────────────────────────────────────────────────── */
+
+.vg-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--border);
+}
+
+.vg-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.vg-legend-item::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.vg-legend--promo::before { background: #22c55e; }
+.vg-legend--releg::before  { background: #ef4444; }
+.vg-legend--scr::before    { background: #3b82f6; }
+
+/* ── Cartes (col 2) ───────────────────────────────────────────────────────── */
+
+.vg-card {
+  background: var(--bg-card);
+  border: 0.5px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vg-card-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.vg-score-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vg-score {
+  font-family: var(--font-title);
+  font-size: 48px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.vg-result-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.vg-adv-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vg-logo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.vg-logo-ph {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.vg-adv {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.vg-adv--lg {
+  font-size: 20px;
+}
+
+.vg-buteurs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.vg-buteur {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 9px;
+  border-radius: 6px;
+  border: 0.5px solid var(--border);
+}
+
+.vg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.vg-badge-sm {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 10px;
+}
+
+.vg-badge-sm.dom { background: rgba(61, 255, 110, 0.1); color: #3dff6e; }
+.vg-badge-sm.ext { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+
+.vg-lieu {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.vg-division-tag {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-top: 4px;
+}
+
+.vg-countdown {
+  font-family: var(--font-title);
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1;
+}
+
+/* ── Meilleur buteur (col 3) ──────────────────────────────────────────────── */
+
+.vg-scorer-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.vg-scorer-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  border: 2px solid;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-size: 24px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.vg-scorer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vg-scorer-name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.vg-scorer-cat {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.vg-scorer-total {
+  font-family: var(--font-title);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+.vg-scorer-matchs {
+  margin-top: 4px;
+}
+
+.vg-scorer-matchs-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 8px;
+}
+
+.vg-scorer-match {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 0.5px solid var(--border);
+  gap: 8px;
+}
+
+.vg-scorer-match-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vg-scorer-match-adv {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vg-scorer-match-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vg-scorer-match-buts {
+  display: flex;
+  gap: 3px;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* ── États de chargement ─────────────────────────────────────────────────── */
+
+.vg-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 0;
+}
+
+.vg-state--error {
+  color: var(--rouge);
+  font-size: 14px;
+}
+
+.vg-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 960px) {
+  .vg-grid {
+    grid-template-columns: 1fr;
+  }
+}

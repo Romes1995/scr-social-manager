@@ -165,6 +165,7 @@ export default function Resultats() {
   const [selectedIds, setSelectedIds]   = useState([]);
   const [generating, setGenerating]     = useState(false);
   const [visuel, setVisuel]             = useState(null);
+  const [textePublication, setTextePublication] = useState('');
   const [publishingVisuel, setPublishingVisuel] = useState(null);
 
   const showAlert = (type, msg) => {
@@ -314,16 +315,25 @@ export default function Resultats() {
 
   const handleGenerateVisuel = async () => {
     if (selectedIds.length === 0) { showAlert('error', 'Sélectionnez au moins un résultat'); return; }
-    setGenerating(true); setVisuel(null);
+    setGenerating(true); setVisuel(null); setTextePublication('');
     try {
       const res = await generateResultatWeekend(selectedIds);
       setVisuel(res.data);
+      setTextePublication(res.data.texte || '');
       showAlert('success', 'Visuel généré avec succès');
     } catch (err) {
       showAlert('error', err.response?.data?.error || 'Erreur lors de la génération');
     } finally {
       setGenerating(false);
     }
+  };
+
+  const handleCopyTexte = () => {
+    navigator.clipboard.writeText(textePublication).then(() => {
+      showAlert('success', 'Texte copié dans le presse-papier');
+    }).catch(() => {
+      showAlert('error', 'Impossible de copier');
+    });
   };
 
   const handlePublishVisuel = async (type) => {
@@ -393,7 +403,7 @@ export default function Resultats() {
           <p className="page-subtitle">Historique des matchs terminés</p>
         </div>
         <div className="actions-bar">
-          <button className="btn btn-secondary" onClick={() => { setShowVisuels(v => !v); setVisuel(null); setSelectedIds([]); }}>
+          <button className="btn btn-secondary" onClick={() => { setShowVisuels(v => !v); setVisuel(null); setSelectedIds([]); setTextePublication(''); }}>
             Générer le visuel
           </button>
           <button className="btn btn-primary" onClick={openCreate}>+ Saisir résultat</button>
@@ -472,19 +482,54 @@ export default function Resultats() {
             {visuel && (
               <div>
                 <h3 style={{ marginBottom: 16, fontSize: 16 }}>Aperçu du visuel généré</h3>
-                <div style={{ display: 'inline-block', textAlign: 'center' }}>
-                  <img src={visuel.full_url} alt="Visuel résultats"
-                    style={{ width: 320, borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'block', marginBottom: 12 }} />
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                    <button className="btn btn-sm btn-primary" onClick={() => handlePublishVisuel('instagram')} disabled={publishingVisuel !== null} style={{ fontSize: 12 }}>
-                      {publishingVisuel === 'instagram' ? '⏳' : '📸'} Instagram
-                    </button>
-                    <button className="btn btn-sm btn-primary" onClick={() => handlePublishVisuel('facebook')} disabled={publishingVisuel !== null}
-                      style={{ fontSize: 12, background: '#1877f2', borderColor: '#1877f2' }}>
-                      {publishingVisuel === 'facebook' ? '⏳' : '👍'} Facebook
-                    </button>
-                    <a href={visuel.full_url} download className="btn btn-sm btn-ghost" style={{ fontSize: 12 }}>Télécharger</a>
+                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                  <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                    <img src={visuel.full_url} alt="Visuel résultats"
+                      style={{ width: 320, borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'block', marginBottom: 12 }} />
+                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                      <button className="btn btn-sm btn-primary" onClick={() => handlePublishVisuel('instagram')} disabled={publishingVisuel !== null} style={{ fontSize: 12 }}>
+                        {publishingVisuel === 'instagram' ? '⏳' : '📸'} Instagram
+                      </button>
+                      <button className="btn btn-sm btn-primary" onClick={() => handlePublishVisuel('facebook')} disabled={publishingVisuel !== null}
+                        style={{ fontSize: 12, background: '#1877f2', borderColor: '#1877f2' }}>
+                        {publishingVisuel === 'facebook' ? '⏳' : '👍'} Facebook
+                      </button>
+                      <a href={visuel.full_url} download className="btn btn-sm btn-ghost" style={{ fontSize: 12 }}>Télécharger</a>
+                    </div>
                   </div>
+                  {textePublication && (
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#ccc' }}>Texte de publication</span>
+                        <button
+                          className="btn btn-sm btn-ghost"
+                          onClick={handleCopyTexte}
+                          style={{ fontSize: 12, borderColor: '#2d6a4f', color: '#4ade80' }}
+                        >
+                          📋 Copier le texte
+                        </button>
+                      </div>
+                      <textarea
+                        readOnly
+                        value={textePublication}
+                        style={{
+                          width: '100%',
+                          minHeight: 220,
+                          background: '#1a1a2e',
+                          color: '#e2e8f0',
+                          border: '1.5px solid #2d6a4f',
+                          borderRadius: 8,
+                          padding: '12px 14px',
+                          fontSize: 13,
+                          lineHeight: 1.6,
+                          fontFamily: 'inherit',
+                          resize: 'vertical',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}

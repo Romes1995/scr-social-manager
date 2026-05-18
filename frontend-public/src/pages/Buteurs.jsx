@@ -1,121 +1,80 @@
 import { useState, useEffect } from 'react';
-import { getButeurs, getClassement, API_BASE_URL } from '../services/api';
+import { getButeursParEquipe, API_BASE_URL } from '../services/api';
 
-function ButeursTable({ data }) {
-  if (!data.length) return <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Aucun buteur enregistré</p>;
+const TEAMS = [
+  { name: 'SCR 1', accent: '#51946a' },
+  { name: 'SCR 2', accent: '#5500ff' },
+  { name: 'SCR 3', accent: '#00bf63' },
+];
+
+function EquipeButeurs({ team, rows }) {
+  const { name, accent } = team;
   return (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Joueur</th>
-          <th>Équipe</th>
-          <th className="num">Buts</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, i) => (
-          <tr key={`${row.buteur}-${row.equipe}`}>
-            <td style={{ color: i < 3 ? 'var(--accent)' : 'var(--text-faint)', fontWeight: 700, width: 32 }}>
+    <div className="card" style={{ borderTopColor: accent, borderTopWidth: 2 }}>
+      <div style={{ fontWeight: 800, fontSize: 14, color: accent, marginBottom: 16, paddingBottom: 10, borderBottom: '0.5px solid var(--border)' }}>
+        {name}
+      </div>
+
+      {rows.length === 0 ? (
+        <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>Aucun buteur enregistré</p>
+      ) : (
+        rows.map((row, i) => (
+          <div
+            key={row.buteur}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '8px 0',
+              borderBottom: i < rows.length - 1 ? '0.5px solid var(--border)' : 'none',
+            }}
+          >
+            <span style={{ fontSize: 11, fontWeight: 700, color: i < 3 ? accent : 'var(--text-faint)', minWidth: 18, textAlign: 'right', flexShrink: 0 }}>
               {i + 1}
-            </td>
-            <td>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {row.joueur_photo && (
-                  <img
-                    src={`${API_BASE_URL}/uploads/joueurs/${row.joueur_photo}`}
-                    alt=""
-                    style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border)' }}
-                  />
-                )}
-                <span style={{ fontWeight: 600, color: i < 3 ? 'var(--text)' : 'var(--text-muted)' }}>
-                  {row.buteur}
-                </span>
-              </div>
-            </td>
-            <td style={{ fontSize: 12, color: 'var(--text-muted)' }}>{row.equipe}</td>
-            <td className={`num ${i < 3 ? 'accent' : ''}`} style={{ fontWeight: 700 }}>{row.buts}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-function ClassementTable({ data }) {
-  if (!data.length) return <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Classement non disponible</p>;
-  return (
-    <table className="data-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Équipe</th>
-          <th className="num">Pts</th>
-          <th className="num">J</th>
-          <th className="num">G</th>
-          <th className="num">N</th>
-          <th className="num">P</th>
-          <th className="num">BP</th>
-          <th className="num">Diff</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.map((row, i) => (
-          <tr key={row.equipe}>
-            <td style={{ color: 'var(--text-faint)', width: 32 }}>{i + 1}</td>
-            <td style={{ fontWeight: row.isSCR ? 700 : 400, color: row.isSCR ? 'var(--accent)' : 'var(--text-muted)' }}>
-              {row.equipe}
-            </td>
-            <td className={`num ${row.isSCR ? 'accent' : ''}`} style={{ fontWeight: 700 }}>{row.points}</td>
-            <td className="num">{row.joues}</td>
-            <td className="num">{row.victoires}</td>
-            <td className="num">{row.nuls}</td>
-            <td className="num">{row.defaites}</td>
-            <td className="num">{row.buts_pour}</td>
-            <td className="num" style={{ color: row.diff > 0 ? 'var(--accent)' : row.diff < 0 ? 'var(--rouge)' : 'var(--text-muted)' }}>
-              {row.diff > 0 ? `+${row.diff}` : row.diff}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+            </span>
+            {row.joueur_photo ? (
+              <img
+                src={`${API_BASE_URL}${row.joueur_photo}`}
+                alt=""
+                style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border)', flexShrink: 0 }}
+              />
+            ) : null}
+            <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: i < 3 ? 'var(--text)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {row.buteur}
+            </span>
+            <span style={{ fontSize: 13, fontWeight: 800, color: accent, flexShrink: 0 }}>
+              {row.buts}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
   );
 }
 
 export default function Buteurs() {
-  const [tab, setTab]               = useState('buteurs');
-  const [buteurs, setButeurs]       = useState([]);
-  const [classement, setClassement] = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [data, setData]       = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([getButeurs(), getClassement()])
-      .then(([b, c]) => { setButeurs(b.data); setClassement(c.data); })
-      .catch(() => {})
+    getButeursParEquipe()
+      .then(r => setData(r.data))
+      .catch(err => console.error('[Buteurs]', err))
       .finally(() => setLoading(false));
   }, []);
 
   return (
     <div className="page">
-      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>Buteurs</h1>
-
-      <div className="tabs">
-        <button className={`tab-btn${tab === 'buteurs' ? ' active' : ''}`} onClick={() => setTab('buteurs')}>
-          Buteurs SCR
-        </button>
-        <button className={`tab-btn${tab === 'classement' ? ' active' : ''}`} onClick={() => setTab('classement')}>
-          Classement division
-        </button>
-      </div>
-
-      {loading ? (
-        <div className="spinner" />
-      ) : (
-        <div className="card">
-          {tab === 'buteurs'
-            ? <ButeursTable data={buteurs} />
-            : <ClassementTable data={classement} />
-          }
+      <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 24 }}>Buteurs</h1>
+      {loading ? <div className="spinner" /> : (
+        <div className="home-grid">
+          {TEAMS.map(team => (
+            <EquipeButeurs
+              key={team.name}
+              team={team}
+              rows={data.filter(r => r.equipe === team.name)}
+            />
+          ))}
         </div>
       )}
     </div>

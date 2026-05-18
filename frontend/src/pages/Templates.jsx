@@ -158,6 +158,7 @@ const DYNAMIC_ELEMENTS = {
     { source: 'logo_domicile',  label: 'Logo domicile',   icon: '🏠', w: 250, h: 250 },
     { source: 'logo_exterieur', label: 'Logo extérieur',  icon: '✈️', w: 250, h: 250 },
     { source: 'logo_scr',       label: 'Logo SCR (fixe)', icon: '🏆', w: 250, h: 250 },
+    { source: 'ballon_buteur',  label: 'Ballon buteur',   icon: '⚽', w: 60,  h: 60,  zoneType: 'image_statique' },
   ],
   textes: [
     { source: 'nom_domicile',  label: 'Nom équipe domicile',  icon: '🏠' },
@@ -173,6 +174,12 @@ const TYPE_LABELS = {
   texte_fixe:      'Texte fixe',
   texte_dynamique: 'Dynamique',
   image_dynamique: 'Image',
+  image_statique:  'Statique',
+};
+
+// URLs des assets statiques prévisualisables dans le canvas
+const STATIC_ASSET_URLS = {
+  ballon_buteur: `${API_BASE}/uploads/assets/ballon.png`,
 };
 
 // ── Helpers de formatage ──────────────────────────────────────────────────────
@@ -262,7 +269,7 @@ function ZoneRect({ zone, idx, scale, isSelected, onSelect, onUpdate, previewIma
   // ── Contenu selon type et mode preview ──
   let content;
 
-  if (zoneType === 'image_dynamique' && previewImage) {
+  if ((zoneType === 'image_dynamique' || zoneType === 'image_statique') && previewImage) {
     // Image réelle avec fit "contain" + bordure subtile
     const imgW      = previewImage.width || previewImage.naturalWidth || 1;
     const imgH      = previewImage.height || previewImage.naturalHeight || 1;
@@ -313,6 +320,10 @@ function ZoneRect({ zone, idx, scale, isSelected, onSelect, onUpdate, previewIma
       fillRgba     = 'rgba(96, 165, 250, 0.18)';
       dash         = [8, 4];
       displayLabel = zone.label || zone.source || `Image ${idx + 1}`;
+    } else if (zoneType === 'image_statique') {
+      fillRgba     = 'rgba(251, 191, 36, 0.18)';
+      dash         = [8, 4];
+      displayLabel = zone.label || zone.source || `Statique ${idx + 1}`;
     } else if (zoneType === 'texte_dynamique') {
       fillRgba     = 'rgba(167, 139, 250, 0.18)';
       dash         = [6, 3];
@@ -587,6 +598,12 @@ export default function Templates() {
   const [imgSize,          setImgSize]          = useState({ w: 1080, h: 1920 });
   const [selectedZoneIdx,  setSelectedZoneIdx]  = useState(null);
 
+  // Assets statiques (ballon, etc.) chargés pour aperçu canvas
+  const [staticImages,     setStaticImages]     = useState({});
+
+  // Refs pour auto-scroll vers la zone sélectionnée dans le panneau droit
+  const zoneItemRefs = useRef({});
+
   // Menu "+ Élément"
   const [showElemMenu,     setShowElemMenu]     = useState(false);
   const elemMenuRef = useRef(null);
@@ -663,6 +680,18 @@ export default function Templates() {
       .then(r => setPresetInfo(r.data))
       .catch(() => setPresetInfo({}));
   }, []);
+
+  // Charge les assets statiques dès que la modal zones s'ouvre
+  useEffect(() => {
+    if (!showZoneModal) return;
+    loadImages(STATIC_ASSET_URLS).then(imgs => setStaticImages(imgs));
+  }, [showZoneModal]);
+
+  // Auto-scroll vers la zone sélectionnée dans le panneau droit
+  useEffect(() => {
+    if (selectedZoneIdx == null) return;
+    zoneItemRefs.current[selectedZoneIdx]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [selectedZoneIdx]);
 
   const openCreate = () => {
     setForm({ nom: '', type: 'programme', equipe: 'Toutes' });
@@ -773,8 +802,27 @@ export default function Templates() {
     setZones(prev => [...prev, { ...ZONE_TEMPLATE, id: `zone_${Date.now()}` }]);
   };
 
+  const duplicateZone = (idx) => {
+    const zone = zones[idx];
+    const W    = imgSize.w || 1080;
+    const H    = imgSize.h || 1920;
+    const newZone = {
+      ...zone,
+      id: `zone_${Date.now()}`,
+      x: Math.min(zone.x + 20, W - (zone.width  || 10)),
+      y: Math.min(zone.y + 20, H - (zone.height || 10)),
+    };
+    setZones(prev => {
+      const next = [...prev];
+      next.splice(idx + 1, 0, newZone);
+      return next;
+    });
+    setSelectedZoneIdx(idx + 1);
+  };
+
   const addElement = (elemDef) => {
-    const isImage = DYNAMIC_ELEMENTS.images.some(e => e.source === elemDef.source);
+    const isStatique = elemDef.zoneType === 'image_statique';
+    const isImage    = isStatique || DYNAMIC_ELEMENTS.images.some(e => e.source === elemDef.source);
     const base = {
       id:     `elem_${Date.now()}`,
       label:  elemDef.label,
@@ -783,9 +831,11 @@ export default function Templates() {
       width:  isImage ? (elemDef.w || 250) : 500,
       height: isImage ? (elemDef.h || 250) : 100,
     };
-    const element = isImage
-      ? { ...base, type: 'image_dynamique' }
-      : { ...base, type: 'texte_dynamique', fontSize: 60, fontFamily: 'Bebas Neue', color: '#ffffff', align: 'center' };
+    const element = isStatique
+      ? { ...base, type: 'image_statique' }
+      : isImage
+        ? { ...base, type: 'image_dynamique' }
+        : { ...base, type: 'texte_dynamique', fontSize: 60, fontFamily: 'Bebas Neue', color: '#ffffff', align: 'center' };
     setZones(prev => [...prev, element]);
     setShowElemMenu(false);
   };
@@ -1007,7 +1057,7 @@ export default function Templates() {
                             isSelected={selectedZoneIdx === idx}
                             onSelect={setSelectedZoneIdx}
                             onUpdate={(updates) => updateZoneFields(idx, updates)}
-                            previewImage={previewImages[zone.source] || null}
+                            previewImage={(previewImages[zone.source] || staticImages[zone.source]) || null}
                             previewText={previewTexts[zone.source] || null}
                           />
                         ))}
@@ -1113,7 +1163,12 @@ export default function Templates() {
                                 <button key={e.source} className="elem-menu-item" onClick={() => addElement(e)}>
                                   <span className="elem-menu-icon">{e.icon}</span>
                                   {e.label}
-                                  <span className="zone-type-badge zone-type-image_dynamique" style={{ marginLeft: 'auto' }}>Image</span>
+                                  <span
+                                    className={`zone-type-badge zone-type-${e.zoneType || 'image_dynamique'}`}
+                                    style={{ marginLeft: 'auto' }}
+                                  >
+                                    {e.zoneType === 'image_statique' ? 'Statique' : 'Image'}
+                                  </span>
                                 </button>
                               ))}
                             </div>
@@ -1146,6 +1201,7 @@ export default function Templates() {
                       return (
                         <div
                           key={idx}
+                          ref={el => { if (el) zoneItemRefs.current[idx] = el; else delete zoneItemRefs.current[idx]; }}
                           className={`zone-item card${selectedZoneIdx === idx ? ' zone-item--active' : ''}`}
                           onClick={() => setSelectedZoneIdx(idx)}
                         >
@@ -1158,8 +1214,14 @@ export default function Templates() {
                               {TYPE_LABELS[zoneType] || zoneType}
                             </span>
                             <button
-                              className="btn btn-sm btn-danger"
+                              className="btn btn-sm btn-ghost"
                               style={{ marginLeft: 6 }}
+                              title="Dupliquer"
+                              onClick={(e) => { e.stopPropagation(); duplicateZone(idx); }}
+                            >⧉</button>
+                            <button
+                              className="btn btn-sm btn-danger"
+                              style={{ marginLeft: 4 }}
                               onClick={(e) => { e.stopPropagation(); removeZone(idx); }}
                             >✕</button>
                           </div>
@@ -1276,6 +1338,17 @@ export default function Templates() {
                               {previewImages[zone.source] && (
                                 <span className="zone-source-preview"> ✓ logo chargé</span>
                               )}
+                            </div>
+                          )}
+
+                          {/* image_statique */}
+                          {zoneType === 'image_statique' && (
+                            <div className="zone-source-info">
+                              Asset : <code>{zone.source}</code>
+                              {staticImages[zone.source]
+                                ? <span className="zone-source-preview"> ✓ image chargée</span>
+                                : <span style={{ color: 'var(--texte-gris)', fontSize: 11 }}> (fichier manquant)</span>
+                              }
                             </div>
                           )}
                         </div>

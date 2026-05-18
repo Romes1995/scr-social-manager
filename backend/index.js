@@ -14,11 +14,15 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Middlewares
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173,http://localhost:5174').split(',');
 app.use(cors({
-  origin: (origin, cb) => (!origin || allowedOrigins.some(o => origin.startsWith(o.trim())) ? cb(null, true) : cb(new Error('CORS'))),
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  origin: function(origin, callback) {
+    if (!origin || origin.startsWith('http://localhost')) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

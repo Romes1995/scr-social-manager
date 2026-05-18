@@ -12,20 +12,15 @@ const NAV_GROUPS = [
       { id: 'programme',   label: 'Programme',   icon: '📅' },
       { id: 'matchday',    label: 'Match Day',    icon: '🏟️' },
       { id: 'convocation', label: 'Convocation',  icon: '📨' },
+      { id: 'resultats',   label: 'Résultats',    icon: '🏆' },
     ],
   },
   { id: 'score_live', label: 'Score Live' },
   {
-    id: 'publications', label: 'Publications',
-    children: [
-      { id: 'resultats', label: 'Résultats', icon: '🏆' },
-      { id: 'listes',    label: 'Listes',    icon: '📋' },
-    ],
-  },
-  {
     id: 'gestion', label: 'Gestion',
     children: [
       { id: 'templates', label: 'Templates', icon: '🎨' },
+      { id: 'listes',    label: 'Liste',     icon: '📋' },
     ],
   },
 ];

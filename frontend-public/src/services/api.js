@@ -16,5 +16,6 @@ export const getClassement          = () => api.get('/public/classement');
 export const getButeursParEquipe    = () => api.get('/public/buteurs-par-equipe');
 export const getClassementParEquipe = () => api.get('/public/classement-par-equipe');
 export const getCarousel            = (teamId) => api.get(`/public/carousel/${teamId}`);
+export const getVitrineData         = (teamId) => api.get(`/public/vitrine/${teamId}`);
 
 export const API_BASE_URL = API_BASE.replace('/api', '');

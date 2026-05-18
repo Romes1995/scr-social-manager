@@ -76,7 +76,13 @@ async function fetchAllMatchesDOFA() {
   while (url) {
     const resp = await axios.get(url, {
       timeout: 10000,
-      headers: { Accept: 'application/json' },
+      headers: {
+        'Accept': 'application/json, */*',
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept-Language': 'fr-FR,fr;q=0.9',
+        'Referer': 'https://www.fff.fr/',
+        'Origin': 'https://www.fff.fr',
+      },
     });
 
     const data    = resp.data;
@@ -162,61 +168,60 @@ router.post('/save', async (req, res) => {
   }
 
   const saved   = [];
-  const skipped = [];
   const updated = [];
   const errors  = [];
 
   for (const match of matchs) {
     try {
-      // Déduplication : même équipe + adversaire + date
-      if (match.date) {
-        const dup = await pool.query(
-          `SELECT id, statut FROM matches WHERE LOWER(equipe)=LOWER($1) AND LOWER(adversaire)=LOWER($2) AND date=$3`,
-          [match.equipe || 'SCR 1', match.adversaire, match.date]
-        );
-
-        if (dup.rows.length > 0) {
-          const existing = dup.rows[0];
-
-          // Si le match existe en BDD comme 'programme' mais est maintenant 'termine', mettre à jour le score
-          if (existing.statut === 'programme' && match.statut === 'termine'
-              && match.score_scr !== null && match.score_adv !== null) {
-            await pool.query(
-              `UPDATE matches SET score_scr=$1, score_adv=$2, statut='termine', updated_at=NOW()
-               WHERE id=$3`,
-              [match.score_scr, match.score_adv, existing.id]
-            );
-            updated.push({ adversaire: match.adversaire, date: match.date });
-          } else {
-            skipped.push({ adversaire: match.adversaire, date: match.date });
-          }
-          continue;
-        }
-      }
-
-      // Insertion selon le statut
       const statut = match.statut === 'termine' ? 'termine' : 'programme';
       const result = await pool.query(
         `INSERT INTO matches
-           (equipe, adversaire, logo_adversaire, date, heure, domicile, division, statut,
+           (equipe, adversaire, logo_adversaire, date, heure, lieu, domicile, division, statut,
             score_scr, score_adv)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING *`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (equipe, date, adversaire) DO UPDATE SET
+           heure            = COALESCE(EXCLUDED.heure, matches.heure),
+           lieu             = COALESCE(EXCLUDED.lieu,  matches.lieu),
+           logo_adversaire  = COALESCE(EXCLUDED.logo_adversaire, matches.logo_adversaire),
+           division         = COALESCE(EXCLUDED.division, matches.division),
+           statut           = CASE
+             WHEN matches.statut = 'programme' AND EXCLUDED.statut = 'termine'
+             THEN 'termine'
+             ELSE matches.statut
+           END,
+           score_scr        = CASE
+             WHEN matches.statut = 'programme' AND EXCLUDED.statut = 'termine'
+             THEN EXCLUDED.score_scr
+             ELSE matches.score_scr
+           END,
+           score_adv        = CASE
+             WHEN matches.statut = 'programme' AND EXCLUDED.statut = 'termine'
+             THEN EXCLUDED.score_adv
+             ELSE matches.score_adv
+           END,
+           updated_at       = NOW()
+         RETURNING *, (xmax = 0) AS inserted`,
         [
-          match.equipe     || 'SCR 1',
+          match.equipe           || 'SCR 1',
           match.adversaire,
-          match.logo_adversaire || null,
-          match.date       || null,
-          match.heure      || null,
-          match.domicile   !== false,
-          match.division   || null,
+          match.logo_adversaire  || null,
+          match.date             || null,
+          match.heure            || null,
+          match.lieu             || null,
+          match.domicile         !== false,
+          match.division         || null,
           statut,
-          match.score_scr  ?? null,
-          match.score_adv  ?? null,
+          match.score_scr        ?? null,
+          match.score_adv        ?? null,
         ]
       );
-      saved.push(result.rows[0]);
-      ensureAdversaireClub(match.adversaire);
+      const row = result.rows[0];
+      if (row.inserted) {
+        saved.push(row);
+        ensureAdversaireClub(match.adversaire);
+      } else {
+        updated.push({ adversaire: match.adversaire, date: match.date });
+      }
     } catch (err) {
       errors.push({ match: match.adversaire, error: err.message });
     }
@@ -226,7 +231,6 @@ router.post('/save', async (req, res) => {
     success: true,
     saved: saved.length,
     updated: updated.length,
-    skipped: skipped.length,
     errors,
   });
 });

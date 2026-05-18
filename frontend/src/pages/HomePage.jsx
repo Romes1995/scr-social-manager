@@ -5,6 +5,7 @@ import photo3 from '../assets/photos/photo3.png';
 import photo4 from '../assets/photos/photo4.png';
 import photo5 from '../assets/photos/photo5.png';
 import { importFFF } from '../services/api';
+import TopNav from '../components/TopNav';
 import './HomePage.css';
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -16,23 +17,6 @@ const MOIS   = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','N
 
 const TEAM_COLOR = { 'SCR 1': '#4ac878', 'SCR 2': '#f5c518', 'SCR 3': '#a78bfa' };
 const TEAM_DIV   = { 'SCR 1': 'District 1', 'SCR 2': 'District 5', 'SCR 3': 'District 7' };
-
-const NAV_GROUPS = [
-  { label: 'Accueil',     tab: 'home' },
-  { label: 'Générations', tab: 'programme',  children: [
-    { label: 'Programme',   tab: 'programme',   icon: '📅' },
-    { label: 'Match Day',   tab: 'matchday',    icon: '🏟️' },
-    { label: 'Convocation', tab: 'convocation', icon: '📨' },
-  ]},
-  { label: 'Score Live',  tab: 'score_live' },
-  { label: 'Publications',tab: 'resultats', children: [
-    { label: 'Résultats', tab: 'resultats', icon: '🏆' },
-    { label: 'Listes',    tab: 'listes',    icon: '📋' },
-  ]},
-  { label: 'Gestion',     tab: 'templates', children: [
-    { label: 'Templates', tab: 'templates', icon: '🎨' },
-  ]},
-];
 
 const SLIDES = [
   {
@@ -102,141 +86,6 @@ function fmtHeure(h) {
 function initials(name = '') {
   const p = name.trim().split(' ');
   return p.length >= 2 ? `${p[0][0]}. ${p.slice(1).join(' ')}` : name;
-}
-
-// ── SVG Écusson SCR ───────────────────────────────────────────────────────────
-
-function ScrCrest({ size = 38 }) {
-  const h = Math.round(size * 1.2);
-  return (
-    <svg width={size} height={h} viewBox="0 0 40 48" fill="none" aria-hidden="true">
-      <path d="M20 2L38 9V27Q38 41 20 46Q2 41 2 27V9Z"
-        fill="#0d2218" stroke="#4ac878" strokeWidth="1.5" />
-      <path d="M20 6L34 12V27Q34 38 20 43Q6 38 6 27V12Z"
-        fill="#091a10" />
-      <line x1="6" y1="23" x2="34" y2="23" stroke="#f5c518" strokeWidth="0.6" opacity="0.7" />
-      <text x="20" y="20" textAnchor="middle"
-        fontFamily="Bebas Neue,Arial Narrow,Arial" fontSize="11" letterSpacing="1"
-        fill="#4ac878">SCR</text>
-      <text x="20" y="33" textAnchor="middle"
-        fontFamily="Bebas Neue,Arial Narrow,Arial" fontSize="7" letterSpacing="0.5"
-        fill="#f5c518">1905</text>
-      <circle cx="13" cy="27" r="1.5" fill="#f5c518" opacity="0.7" />
-      <circle cx="27" cy="27" r="1.5" fill="#f5c518" opacity="0.7" />
-    </svg>
-  );
-}
-
-// ── TopNav ────────────────────────────────────────────────────────────────────
-
-function HomeNav({ activeTab, setActiveTab }) {
-  const [openMenu,   setOpenMenu]   = useState(null);
-  const [importing,  setImporting]  = useState(false);
-  const [toast,      setToast]      = useState(null);
-
-  useEffect(() => {
-    if (!openMenu) return;
-    const close = (e) => {
-      if (!e.target.closest('.hn-dropdown-wrap')) setOpenMenu(null);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [openMenu]);
-
-  const go = (tab) => { if (tab) setActiveTab(tab); setOpenMenu(null); };
-
-  const doImport = async () => {
-    setImporting(true);
-    try {
-      const r = await importFFF();
-      const nb = r.data?.nouveaux ?? r.data?.importes ?? '?';
-      setToast({ ok: true, msg: `${nb} match(s) importé(s)` });
-    } catch {
-      setToast({ ok: false, msg: 'Erreur import FFF' });
-    } finally {
-      setImporting(false);
-      setTimeout(() => setToast(null), 4000);
-    }
-  };
-
-  const activeGroup = NAV_GROUPS.find(g =>
-    g.tab === activeTab || g.children?.some(c => c.tab === activeTab)
-  )?.tab;
-
-  return (
-    <>
-      <nav className="hn">
-        <div className="hn-inner">
-          {/* Écusson */}
-          <button className="hn-brand" onClick={() => go('home')}>
-            <ScrCrest size={36} />
-            <span className="hn-brand-text">
-              <span className="hn-brand-name">SCR Social Manager</span>
-              <span className="hn-brand-sub">SC Roeschwoog</span>
-            </span>
-          </button>
-
-          {/* Onglets */}
-          <div className="hn-links">
-            {NAV_GROUPS.map((g) => {
-              const isActive = activeGroup === g.tab;
-              if (!g.children) {
-                return (
-                  <button key={g.tab}
-                    className={`hn-link${isActive ? ' hn-link--on' : ''}`}
-                    onClick={() => go(g.tab)}>
-                    {g.label}
-                  </button>
-                );
-              }
-              const isOpen = openMenu === g.tab;
-              return (
-                <div key={g.tab} className="hn-dropdown-wrap">
-                  <button
-                    className={`hn-link hn-link--arrow${isActive ? ' hn-link--on' : ''}${isOpen ? ' hn-link--open' : ''}`}
-                    onClick={() => setOpenMenu(isOpen ? null : g.tab)}
-                  >
-                    {g.label}
-                    <svg className="hn-chevron" width="9" height="5" viewBox="0 0 9 5">
-                      <path d="M1 1l3.5 3L8 1" stroke="currentColor" strokeWidth="1.4"
-                        fill="none" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                  {isOpen && (
-                    <div className="hn-dropdown">
-                      {g.children.map(c => (
-                        <button key={c.tab}
-                          className={`hn-dropdown-item${activeTab === c.tab ? ' hn-dropdown-item--on' : ''}`}
-                          onClick={() => go(c.tab)}>
-                          <span>{c.icon}</span> {c.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Actions */}
-          <div className="hn-actions">
-            <button className="hn-btn hn-btn--ghost" onClick={doImport} disabled={importing}>
-              {importing ? '⏳' : '⬇'} Import FFF
-            </button>
-            <button className="hn-btn hn-btn--gold" onClick={() => go('resultats')}>
-              + Publier
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {toast && (
-        <div className={`hn-toast${toast.ok ? ' hn-toast--ok' : ' hn-toast--err'}`}>
-          {toast.ok ? '✅' : '❌'} {toast.msg}
-        </div>
-      )}
-    </>
-  );
 }
 
 // ── HeroSlider ────────────────────────────────────────────────────────────────
@@ -637,7 +486,7 @@ export default function HomePage({ activeTab, setActiveTab }) {
   return (
     <div className="hp">
       {/* ── Topnav ── */}
-      <HomeNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <TopNav activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* ── Hero ── */}
       <HeroSlider setActiveTab={setActiveTab} onImport={doImport} />

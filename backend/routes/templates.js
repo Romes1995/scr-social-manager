@@ -625,9 +625,11 @@ router.post('/generate-resultat-weekend', async (req, res) => {
       };
     }));
 
-    const url  = await generateResultat({ matches, zoneOverrides });
-    const base = `http://localhost:${process.env.PORT || 3001}`;
-    res.json({ success: true, url, full_url: base + url });
+    const { generateTexteResultat } = require('../services/generateTexteResultat');
+    const url   = await generateResultat({ matches, zoneOverrides });
+    const texte = generateTexteResultat(matches);
+    const base  = `http://localhost:${process.env.PORT || 3001}`;
+    res.json({ success: true, url, full_url: base + url, texte });
   } catch (err) {
     console.error('[generate-resultat-weekend]', err.message);
     res.status(500).json({ error: err.message });

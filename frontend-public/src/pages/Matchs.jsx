@@ -77,7 +77,7 @@ export default function Matchs() {
   useEffect(() => {
     getPublicMatchs()
       .then(r => setData(r.data))
-      .catch(() => {})
+      .catch(err => console.error('[Matchs]', err))
       .finally(() => setLoading(false));
   }, []);
 

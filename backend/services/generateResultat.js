@@ -1,54 +1,30 @@
 'use strict';
-/**
- * generateResultat.js — Générateur "Résultats Week-End" 940×788px
- *
- * Polices :
- *   - Score   : Hyperwave2 (backend/fonts/Hyperwave2.ttf) → fallback BebasNeue → Arial
- *   - Noms    : Arial Bold
- *   - Scorers : Arial Regular
- *
- * Templates : backend/uploads/templates/resultat_{1match|2matchs|3matchs}.png
- *
- * Chaque match passé à generateResultat() :
- *   {
- *     logoGauche : chemin absolu  (null = disque gris)
- *     nomGauche  : 'SCR 1'
- *     score      : '2 - 1'
- *     nomDroite  : 'HOENHEIM SR'
- *     logoDroite : chemin absolu  (null = disque gris)
- *     scorers    : 'Dupont J.\nMartin T. [2]'  — [N] = nb de buts
- *     domicile   : true si SCR est à gauche
- *   }
- */
 
 const sharp = require('sharp');
 const path  = require('path');
 const fs    = require('fs');
 
-const BACKEND    = path.join(__dirname, '..');
-const TEMPLATES  = path.join(BACKEND, 'uploads', 'templates');
-const GENERATED  = path.join(BACKEND, 'uploads', 'generated');
+const BACKEND   = path.join(__dirname, '..');
+const TEMPLATES = path.join(BACKEND, 'uploads', 'templates');
+const GENERATED = path.join(BACKEND, 'uploads', 'generated');
+const ASSETS    = path.join(BACKEND, 'assets');
 const BEBAS_FONT = path.join(BACKEND, 'fonts', 'BebasNeue-Regular.ttf');
 const HW2_FONT   = path.join(BACKEND, 'fonts', 'Hyperwave2.ttf');
-const BALL_PNG   = path.join(BACKEND, 'assets', 'ball.png');
+const BALL_PATH  = path.join(ASSETS, 'ball.png');
 
-const LOGO_W    = 89;
-const LOGO_H    = 89;
-const LOGO_HALF = 44;   // Math.floor(LOGO_H / 2)
+// Taille des logos — doit tenir dans le cercle (115×116px)
+const LOGO_SIZE = 76;
+const BALL_SIZE = 15;
 
-// Coordonnées Canva exactes pour les buteurs
-const SCORER_X_DOM = 158;   // SCR domicile (gauche) — text-anchor="start"
-const SCORER_X_EXT = 779;   // SCR extérieur (droite) — text-anchor="end"
-const SCORER_FS    = 13;
-const SCORER_LH    = 16;
-const SCORER_GAP_Y = 22;    // décalage vertical sous nomSCR.cy
-const BALL_SZ      = 13;
+// Buteurs
+const SCORER_FS = 12;
+const SCORER_LH = 14;
+const SCORER_GAP_Y = 20; // décalage sous le centre du nom SCR
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function esc(str) {
   return String(str || '')
-    .replace(/[^\u0000-\uFFFF]/g, ' ')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
@@ -57,8 +33,6 @@ function svgFontDefs() {
   if (fs.existsSync(HW2_FONT)) {
     const fp = HW2_FONT.replace(/\\/g, '/').replace(/ /g, '%20');
     defs.push(`@font-face{font-family:'Hyperwave2';src:url('file://${fp}') format('truetype');}`);
-  } else {
-    console.warn('[generateResultat] Hyperwave2.ttf absent → fallback BebasNeue');
   }
   if (fs.existsSync(BEBAS_FONT)) {
     const fp = BEBAS_FONT.replace(/\\/g, '/').replace(/ /g, '%20');
@@ -74,151 +48,76 @@ function scoreFont() {
 }
 
 async function svgToPng(svgBuf) {
-  try {
-    return await sharp(svgBuf).png().toBuffer();
-  } catch (err) {
-    console.warn('[generateResultat] svgToPng :', err.message);
-    return svgBuf;
-  }
+  return await sharp(svgBuf).png().toBuffer();
 }
 
-async function loadLogo(logoPath, w, h) {
+async function loadLogo(logoPath) {
   if (!logoPath || !fs.existsSync(logoPath)) return null;
   try {
     return await sharp(logoPath)
-      .resize(w, h, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
       .png().toBuffer();
   } catch { return null; }
 }
 
-async function greyDisc(w, h) {
-  const svg = Buffer.from(
-    `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">` +
-    `<ellipse cx="${w/2}" cy="${h/2}" rx="${w/2}" ry="${h/2}" fill="#777" opacity="0.35"/></svg>`
-  );
-  return svgToPng(svg);
-}
-
-/**
- * Charge backend/assets/ball.png en buffer 13×13px.
- * Si absent → le crée programmatiquement (cercle vert/blanc 13×13).
- * Retourne null uniquement en cas d'échec complet.
- */
-async function loadBallBuf() {
+async function loadBall() {
+  if (!fs.existsSync(BALL_PATH)) {
+    console.warn('[generateResultat] ball.png introuvable :', BALL_PATH);
+    return null;
+  }
   try {
-    if (!fs.existsSync(BALL_PNG)) {
-      const assetsDir = path.dirname(BALL_PNG);
-      if (!fs.existsSync(assetsDir)) fs.mkdirSync(assetsDir, { recursive: true });
-      const svg = Buffer.from(
-        '<svg width="13" height="13" xmlns="http://www.w3.org/2000/svg">' +
-        '<circle cx="6.5" cy="6.5" r="6" fill="#1a6b3c" stroke="#ffffff" stroke-width="1.2"/>' +
-        '<ellipse cx="4.5" cy="4" rx="1.8" ry="1.3" fill="#ffffff" opacity="0.35"/>' +
-        '</svg>'
-      );
-      await sharp(svg).png().toFile(BALL_PNG);
-      console.log('[generateResultat] ball.png créé');
+    // Supprimer le fond noir (niveaux < 30 sur les 3 canaux)
+    const { data, info } = await sharp(BALL_PATH)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const pixels = new Uint8Array(data);
+    for (let i = 0; i < pixels.length; i += 4) {
+      const r = pixels[i], g = pixels[i+1], b = pixels[i+2];
+      if (r < 30 && g < 30 && b < 30) {
+        pixels[i+3] = 0; // transparent
+      }
     }
-    return await sharp(BALL_PNG)
-      .resize(BALL_SZ, BALL_SZ, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-      .png().toBuffer();
-  } catch (err) {
-    console.warn('[generateResultat] Impossible de charger ball.png :', err.message);
+
+    const buf = await sharp(Buffer.from(pixels), {
+      raw: { width: info.width, height: info.height, channels: 4 }
+    })
+      .resize(BALL_SIZE, BALL_SIZE, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+      .png()
+      .toBuffer();
+
+    console.log('[generateResultat] ball.png chargé OK, buffer:', buf.length);
+    return buf;
+  } catch(e) {
+    console.error('[generateResultat] erreur ball.png:', e.message);
     return null;
   }
 }
 
-/**
- * Parse les lignes de scorers.
- * Format attendu : "Nom Prénom" ou "Nom Prénom [N]"
- * Retourne : [{ name, count }, ...]
- */
+async function greyDisc() {
+  const s = LOGO_SIZE;
+  const svg = Buffer.from(
+    `<svg width="${s}" height="${s}" xmlns="http://www.w3.org/2000/svg">` +
+    `<ellipse cx="${s/2}" cy="${s/2}" rx="${s/2}" ry="${s/2}" fill="#444" opacity="0.5"/></svg>`
+  );
+  return svgToPng(svg);
+}
+
 function parseScorers(raw) {
   return String(raw || '')
     .split(/[\n;]/)
     .map(s => s.trim())
     .filter(Boolean)
-    .slice(0, 5)
+    .slice(0, 8)
     .map(line => {
       const m = line.match(/^(.+?)\s+\[(\d+)\]$/);
-      return m
-        ? { name: m[1].trim(), count: Math.max(1, parseInt(m[2])) }
-        : { name: line, count: 1 };
+      return m ? { name: m[1].trim(), count: parseInt(m[2]) } : { name: line, count: 1 };
     });
 }
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
-//
-// Logos : 89×89px — top = score.cy - 44
-// logoG left ≈ 67  (zone gauche Canva)
-// logoD left ≈ 800 (zone droite Canva)
-
-const LAYOUT = {
-
-  // ── 1 MATCH ────────────────────────────────────────────────────────────────
-  1: {
-    matches: [
-      {
-        logoG: { left: 67,  top: 394 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-        nomG:  { cx: 262, cy: 385, fs: 22 },
-        score: { cx: 471, cy: 394, fs: 80 },
-        nomD:  { cx: 679, cy: 385, fs: 22 },
-        logoD: { left: 800, top: 394 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-      },
-    ],
-  },
-
-  // ── 2 MATCHS ───────────────────────────────────────────────────────────────
-  2: {
-    matches: [
-      {
-        logoG: { left: 67,  top: 327 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-        nomG:  { cx: 262, cy: 318, fs: 20 },
-        score: { cx: 471, cy: 327, fs: 80 },
-        nomD:  { cx: 679, cy: 318, fs: 20 },
-        logoD: { left: 800, top: 327 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-      },
-      {
-        logoG: { left: 67,  top: 560 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-        nomG:  { cx: 262, cy: 551, fs: 20 },
-        score: { cx: 471, cy: 560, fs: 80 },
-        nomD:  { cx: 679, cy: 551, fs: 20 },
-        logoD: { left: 800, top: 560 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-      },
-    ],
-  },
-
-  // ── 3 MATCHS ───────────────────────────────────────────────────────────────
-  3: {
-    matches: [
-      {
-        logoG: { left: 67,  top: 232 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-        nomG:  { cx: 262, cy: 222, fs: 18 },
-        score: { cx: 469, cy: 232, fs: 80 },
-        nomD:  { cx: 679, cy: 222, fs: 18 },
-        logoD: { left: 800, top: 232 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-      },
-      {
-        logoG: { left: 67,  top: 442 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-        nomG:  { cx: 260, cy: 433, fs: 18 },
-        score: { cx: 469, cy: 442, fs: 80 },
-        nomD:  { cx: 677, cy: 433, fs: 18 },
-        logoD: { left: 800, top: 442 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-      },
-      {
-        logoG: { left: 67,  top: 652 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-        nomG:  { cx: 260, cy: 643, fs: 18 },
-        score: { cx: 471, cy: 652, fs: 80 },
-        nomD:  { cx: 679, cy: 643, fs: 18 },
-        logoD: { left: 800, top: 652 - LOGO_HALF, w: LOGO_W, h: LOGO_H },
-      },
-    ],
-  },
-};
-
-// ─── Rendu texte ──────────────────────────────────────────────────────────────
-
 function textNode({ cx, cy, fs, weight = 'normal', color = '#ffffff', family, content,
-                    stroke = null, strokeWidth = 0, letterSpacing = 0 }) {
+                    stroke = null, strokeWidth = 0, letterSpacing = 0, anchor = 'middle' }) {
   const strokeAttrs = stroke && strokeWidth > 0
     ? ` stroke="${stroke}" stroke-width="${strokeWidth}" stroke-linejoin="round" paint-order="stroke fill"`
     : '';
@@ -229,80 +128,73 @@ function textNode({ cx, cy, fs, weight = 'normal', color = '#ffffff', family, co
     ` font-size="${fs}"` +
     ` font-weight="${weight}"` +
     ` fill="${color}"` +
-    ` text-anchor="middle"` +
+    ` text-anchor="${anchor}"` +
     ` dominant-baseline="middle"` +
     strokeAttrs + lsAttr +
     `>${esc(content)}</text>`
   );
 }
 
-/**
- * Nœuds SVG pour le texte des buteurs uniquement (sans ballons).
- * Les ballons sont ajoutés en couche Sharp séparée.
- *
- * domicile=true  : x=158, anchor="start"
- * domicile=false : x=779, anchor="end"
- * startY = nomSCR.cy + SCORER_GAP_Y
- */
-function scorerTextNodes({ scorers, nomSCRcy, domicile }) {
-  if (!scorers || scorers.length === 0) return '';
-  const scrLeft = domicile !== false;
-  const x       = scrLeft ? SCORER_X_DOM : SCORER_X_EXT;
-  const anchor  = scrLeft ? 'start' : 'end';
-  const startY  = nomSCRcy + SCORER_GAP_Y;
+const LAYOUT = {
+  1: {
+    matches: [{
+      logoG: { cx: 103, cy: 394 },
+      nomG:  { cx: 269, cy: 394, fs: 18 },
+      score: { cx: 470, cy: 400, fs: 90 },
+      nomD:  { cx: 669, cy: 394, fs: 18 },
+      logoD: { cx: 837, cy: 394 },
+    }],
+  },
+  2: {
+    matches: [
+      {
+        logoG: { cx: 103, cy: 318 },
+        nomG:  { cx: 271, cy: 318, fs: 17 },
+        score: { cx: 470, cy: 324, fs: 85 },
+        nomD:  { cx: 669, cy: 318, fs: 17 },
+        logoD: { cx: 837, cy: 318 },
+      },
+      {
+        logoG: { cx: 103, cy: 551 },
+        nomG:  { cx: 271, cy: 551, fs: 17 },
+        score: { cx: 470, cy: 557, fs: 85 },
+        nomD:  { cx: 669, cy: 551, fs: 17 },
+        logoD: { cx: 837, cy: 551 },
+      },
+    ],
+  },
+  3: {
+    matches: [
+      {
+        logoG: { cx: 103, cy: 222 },
+        nomG:  { cx: 269, cy: 222, fs: 15 },
+        score: { cx: 470, cy: 228, fs: 78 },
+        nomD:  { cx: 669, cy: 222, fs: 15 },
+        logoD: { cx: 837, cy: 222 },
+      },
+      {
+        logoG: { cx: 101, cy: 433 },
+        nomG:  { cx: 271, cy: 433, fs: 15 },
+        score: { cx: 470, cy: 439, fs: 78 },
+        nomD:  { cx: 669, cy: 433, fs: 15 },
+        logoD: { cx: 835, cy: 433 },
+      },
+      {
+        logoG: { cx: 103, cy: 643 },
+        nomG:  { cx: 266, cy: 643, fs: 15 },
+        score: { cx: 470, cy: 649, fs: 78 },
+        nomD:  { cx: 669, cy: 643, fs: 15 },
+        logoD: { cx: 837, cy: 643 },
+      },
+    ],
+  },
+};
 
-  return scorers.map(({ name }, i) => {
-    const y = startY + i * SCORER_LH;
-    return (
-      `<text x="${x}" y="${y}"` +
-      ` font-family="Arial,Helvetica,sans-serif"` +
-      ` font-size="${SCORER_FS}"` +
-      ` font-weight="normal"` +
-      ` fill="#ffffff"` +
-      ` text-anchor="${anchor}"` +
-      ` dominant-baseline="middle"` +
-      `>${esc(name)}</text>`
-    );
-  }).join('');
-}
-
-/**
- * Calcule les positions Sharp des ballons pour un match.
- * Estimation de la largeur du texte : nb_chars × 7.5px (13px Arial).
- *
- * domicile=true  : ballons à droite du nom (x = 158 + largeur_nom + gap + k×15)
- * domicile=false : ballons à droite de x=779 (après le bord droit du texte)
- */
-function computeBallLayers({ scorers, nomSCRcy, domicile, ballBuf }) {
-  if (!scorers || scorers.length === 0 || !ballBuf) return [];
-  const scrLeft = domicile !== false;
-  const startY  = nomSCRcy + SCORER_GAP_Y;
-  const layers  = [];
-
-  scorers.forEach(({ name, count }, i) => {
-    const lineY = startY + i * SCORER_LH;
-    const ballTop = Math.round(lineY - BALL_SZ / 2);
-
-    for (let k = 0; k < Math.min(count, 5); k++) {
-      let ballLeft;
-      if (scrLeft) {
-        // Texte part de x=158 et s'étend à droite
-        const estTextWidth = name.length * 7.5;
-        ballLeft = Math.round(SCORER_X_DOM + estTextWidth + 4 + k * (BALL_SZ + 2));
-      } else {
-        // Texte s'arrête à x=779 → ballons après 779
-        ballLeft = Math.round(SCORER_X_EXT + 4 + k * (BALL_SZ + 2));
-      }
-
-      // Garde seulement les ballons dans le canvas 940×788
-      if (ballLeft >= 0 && ballLeft + BALL_SZ <= 940 && ballTop >= 0 && ballTop + BALL_SZ <= 788) {
-        layers.push({ input: ballBuf, left: ballLeft, top: ballTop });
-      }
-    }
-  });
-
-  return layers;
-}
+const SCORER_POS = {
+  1: [ { xG: 163, xD: 775, y: 433 } ],
+  2: [ { xG: 163, xD: 775, y: 355 }, { xG: 163, xD: 775, y: 588 } ],
+  3: [ { xG: 163, xD: 775, y: 260 }, { xG: 163, xD: 775, y: 468 }, { xG: 163, xD: 775, y: 680 } ],
+};
 
 // ─── Fonction principale ───────────────────────────────────────────────────────
 
@@ -320,87 +212,117 @@ async function generateResultat({ matches, outputPath } = {}) {
   if (!fs.existsSync(tplPath)) {
     throw new Error(`[generateResultat] Template introuvable : ${tplPath}`);
   }
-  const tplMeta = await sharp(tplPath).metadata();
-  console.log(`[generateResultat] ${n} match(s) — template ${tplMeta.width}×${tplMeta.height}px`);
 
-  const ballBuf   = await loadBallBuf();
-  const scoreFam  = scoreFont();
-  const arial     = 'Arial,Helvetica,sans-serif';
+  const scoreFam = scoreFont();
+  const arial    = 'Arial,Helvetica,sans-serif';
+  const layers   = [];
+  let   svgNodes = svgFontDefs();
 
-  const logoLayers = [];
-  const ballLayers = [];
-  let   svgNodes   = svgFontDefs();
+  // Charger ball.png une seule fois
+  const ballBuf = await loadBall();
 
   for (let i = 0; i < n; i++) {
     const match   = matches[i];
     const coord   = layout.matches[i];
     const scrLeft = match.domicile !== false;
 
-    // ── Logos ────────────────────────────────────────────────────────────────
-    const lBuf = (await loadLogo(match.logoGauche, coord.logoG.w, coord.logoG.h))
-              || await greyDisc(coord.logoG.w, coord.logoG.h);
-    const rBuf = (await loadLogo(match.logoDroite, coord.logoD.w, coord.logoD.h))
-              || await greyDisc(coord.logoD.w, coord.logoD.h);
+    // ── Logos (centrés dans le cercle) ────────────────────────────────────────
+    const lBuf = (await loadLogo(match.logoGauche)) || await greyDisc();
+    const rBuf = (await loadLogo(match.logoDroite)) || await greyDisc();
 
-    logoLayers.push({ input: lBuf, left: coord.logoG.left, top: coord.logoG.top });
-    logoLayers.push({ input: rBuf, left: coord.logoD.left, top: coord.logoD.top });
+    layers.push({
+      input: lBuf,
+      left: Math.round(coord.logoG.cx - LOGO_SIZE / 2),
+      top:  Math.round(coord.logoG.cy - LOGO_SIZE / 2),
+    });
+    layers.push({
+      input: rBuf,
+      left: Math.round(coord.logoD.cx - LOGO_SIZE / 2),
+      top:  Math.round(coord.logoD.cy - LOGO_SIZE / 2),
+    });
 
-    console.log(
-      `[generateResultat] match ${i + 1} — "${match.nomGauche}" ${match.score} "${match.nomDroite}"` +
-      ` | dom:${scrLeft} logoG:${match.logoGauche ? '✓' : '✗'} logoD:${match.logoDroite ? '✓' : '✗'}`
-    );
-
-    // ── Nom gauche ────────────────────────────────────────────────────────────
+    // ── Nom gauche ─────────────────────────────────────────────────────────────
     svgNodes += textNode({
       cx: coord.nomG.cx, cy: coord.nomG.cy, fs: coord.nomG.fs,
       weight: 'bold', family: arial, content: match.nomGauche,
     });
 
-    // ── Score — fs:80, contour #0c372b 20px, letter-spacing:-8 ───────────────
+    // ── Score ──────────────────────────────────────────────────────────────────
     svgNodes += textNode({
       cx: coord.score.cx, cy: coord.score.cy, fs: coord.score.fs,
-      weight: 'normal', family: scoreFam, content: match.score,
-      stroke: '#0c372b', strokeWidth: 20, letterSpacing: -8,
+      family: scoreFam, content: match.score,
+      stroke: '#0c372b', strokeWidth: 8, letterSpacing: -8,
     });
 
-    // ── Nom droite ────────────────────────────────────────────────────────────
+    // ── Nom droite ─────────────────────────────────────────────────────────────
     svgNodes += textNode({
       cx: coord.nomD.cx, cy: coord.nomD.cy, fs: coord.nomD.fs,
       weight: 'bold', family: arial, content: match.nomDroite,
     });
 
-    // ── Scorers ───────────────────────────────────────────────────────────────
+    // ── Buteurs ────────────────────────────────────────────────────────────────
     if (match.scorers) {
       const scorersParsed = parseScorers(match.scorers);
-      const nomSCRcy = scrLeft ? coord.nomG.cy : coord.nomD.cy;
+      const pos = SCORER_POS[n][i];
+      const startY = pos.y;
+      const xAnchor = scrLeft ? pos.xG : pos.xD;
+      const anchor = scrLeft ? 'start' : 'end';
 
-      // Texte SVG (noms uniquement)
-      svgNodes += scorerTextNodes({ scorers: scorersParsed, nomSCRcy, domicile: scrLeft });
+      scorersParsed.forEach(({ name, count }, idx) => {
+        const y = startY + idx * SCORER_LH;
 
-      // Ballons via Sharp composite
-      ballLayers.push(...computeBallLayers({ scorers: scorersParsed, nomSCRcy, domicile: scrLeft, ballBuf }));
+        // Afficher count ballons côte à côte
+        let textX = scrLeft ? xAnchor + BALL_SIZE + 3 : xAnchor - BALL_SIZE - 3;
+        if (ballBuf) {
+          const totalBallW = count * (BALL_SIZE + 2);
+          let ballStartX;
+          if (scrLeft) {
+            ballStartX = xAnchor;
+          } else {
+            ballStartX = xAnchor - totalBallW;
+          }
+          for (let b = 0; b < count; b++) {
+            layers.push({
+              input: ballBuf,
+              left: Math.round(ballStartX + b * (BALL_SIZE + 2)),
+              top: Math.round(y - BALL_SIZE / 2),
+            });
+          }
+          // Décaler le texte en fonction du nombre de ballons
+          const totalOffset = totalBallW + 3;
+          textX = scrLeft ? xAnchor + totalOffset : xAnchor - totalOffset;
+        }
+
+        svgNodes += textNode({
+          cx: textX,
+          cy: y,
+          fs: SCORER_FS,
+          family: arial,
+          content: name,
+          anchor,
+        });
+      });
     }
   }
 
-  // ── SVG → PNG transparent ─────────────────────────────────────────────────
+  // ── SVG → PNG ───────────────────────────────────────────────────────────────
   const svgBuf  = Buffer.from(
     `<svg width="940" height="788" xmlns="http://www.w3.org/2000/svg">${svgNodes}</svg>`
   );
   const textPng = await svgToPng(svgBuf);
 
-  // ── Composite final : template + logos + texte + ballons ─────────────────
+  // ── Composite final ──────────────────────────────────────────────────────────
   const out = outputPath || path.join(GENERATED, `resultat_weekend_${Date.now()}.png`);
 
   await sharp(tplPath)
     .composite([
-      ...logoLayers,
+      ...layers,
       { input: textPng, top: 0, left: 0 },
-      ...ballLayers,
     ])
     .png({ compressionLevel: 8 })
     .toFile(out);
 
-  console.log(`[generateResultat] ✅ généré → ${out}`);
+  console.log(`[generateResultat] ✅ ${n} match(s) → ${out}`);
   return '/' + path.relative(BACKEND, out).replace(/\\/g, '/');
 }
 

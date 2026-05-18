@@ -103,8 +103,8 @@ export default function ScoreLive() {
         setNextMatch(upcoming[0] || null);
       }
       setLastUpdate(new Date());
-    } catch {
-      // silent — ne pas bloquer l'affichage
+    } catch (err) {
+      console.error('[ScoreLive]', err);
     } finally {
       setLoading(false);
     }
