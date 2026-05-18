@@ -2,7 +2,7 @@
 -- À exécuter sur une base existante
 
 DO $$ BEGIN
-  CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live', 'lecteur');
+  CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,
   username      VARCHAR(50) NOT NULL UNIQUE,
   password_hash TEXT        NOT NULL,
-  role          user_role   NOT NULL DEFAULT 'lecteur',
+  role          user_role   NOT NULL DEFAULT 'gestionnaire',
   created_at    TIMESTAMP   DEFAULT NOW(),
   last_login    TIMESTAMP
 );

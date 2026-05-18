@@ -6,15 +6,27 @@ import './Login.css';
 
 const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
+const ROLE_HOME = {
+  admin:        '/',
+  gestionnaire: '/programme',
+  coach:        '/convocation',
+  score_live:   '/score-live',
+};
+
+function homeForRole(role) {
+  return ROLE_HOME[role] ?? '/programme';
+}
+
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
 
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  // Déjà connecté → redirection vers la page principale du rôle
+  if (isAuthenticated) return <Navigate to={homeForRole(user?.role)} replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +35,7 @@ export default function Login() {
     try {
       const { data } = await loginUser({ username: username.trim(), password });
       login(data.token, data.user);
-      navigate('/', { replace: true });
+      navigate(homeForRole(data.user.role), { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Identifiants invalides');
     } finally {

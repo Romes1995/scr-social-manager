@@ -3,6 +3,8 @@
   max-width: 960px;
   margin: 0 auto;
   color: #fff;
+  min-height: 100vh;
+  background: #0a0f0d;
 }
 
 .ua-header {
@@ -17,10 +19,11 @@
   font-size: 1.75rem;
   font-weight: 700;
   margin: 0 0 0.25rem;
+  color: #3dff6e;
 }
 
 .ua-subtitle {
-  color: rgba(255,255,255,.45);
+  color: rgba(255,255,255,.5);
   font-size: 0.875rem;
   margin: 0;
 }
@@ -38,13 +41,13 @@
 }
 .ua-btn:hover:not(:disabled) { opacity: .85; }
 .ua-btn:disabled { opacity: .4; cursor: not-allowed; }
-.ua-btn--primary { background: #4ac878; color: #fff; }
+.ua-btn--primary { background: #3dff6e; color: #0a0f0d; }
 .ua-btn--danger  { background: rgba(239,68,68,.15); color: #fca5a5; border: 1px solid rgba(239,68,68,.35); }
 
 /* Create form */
 .ua-create-form {
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.1);
+  background: #0f1812;
+  border: 1px solid rgba(61,255,110,.15);
   border-radius: 12px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
@@ -54,7 +57,7 @@
   font-size: 1rem;
   font-weight: 600;
   margin: 0 0 1rem;
-  color: #4ac878;
+  color: #3dff6e;
 }
 
 .ua-form-row {
@@ -75,14 +78,14 @@
 }
 
 .ua-field label {
-  color: rgba(255,255,255,.6);
+  color: rgba(255,255,255,.65);
   font-size: .8rem;
   font-weight: 500;
 }
 
 .ua-field input,
 .ua-field select {
-  background: rgba(255,255,255,.07);
+  background: #1a2118;
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 7px;
   color: #fff;
@@ -92,15 +95,16 @@
 }
 
 .ua-field input:focus,
-.ua-field select:focus { border-color: #4ac878; }
+.ua-field select:focus { border-color: #3dff6e; }
 
-.ua-field select option { background: #1a2840; }
+.ua-field select option { background: #0f1812; color: #fff; }
 
 /* Table */
 .ua-table-wrap {
   overflow-x: auto;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1px solid rgba(61,255,110,.1);
+  background: #0f1812;
 }
 
 .ua-table {
@@ -110,7 +114,7 @@
 }
 
 .ua-table thead th {
-  background: rgba(255,255,255,.05);
+  background: rgba(61,255,110,.05);
   color: rgba(255,255,255,.55);
   font-size: .75rem;
   font-weight: 600;
@@ -126,24 +130,27 @@
   transition: background .12s;
 }
 
-.ua-table tbody tr:hover { background: rgba(255,255,255,.03); }
-.ua-row--me { background: rgba(74,200,120,.04) !important; }
+.ua-table tbody tr:hover { background: rgba(61,255,110,.04); }
+.ua-row--me { background: rgba(61,255,110,.06) !important; }
 
 .ua-table td {
   padding: .875rem 1rem;
   vertical-align: middle;
+  color: #e8ffe8;
 }
 
 .ua-username {
   font-weight: 600;
+  color: #fff;
   display: flex;
   align-items: center;
   gap: .5rem;
 }
 
 .ua-me-badge {
-  background: rgba(74,200,120,.2);
-  color: #4ac878;
+  background: rgba(61,255,110,.2);
+  color: #3dff6e;
+  border: 1px solid rgba(61,255,110,.35);
   border-radius: 4px;
   font-size: .7rem;
   font-weight: 700;
@@ -154,13 +161,14 @@
   border: 1px solid;
   border-radius: 5px;
   font-size: .75rem;
-  font-weight: 600;
+  font-weight: 700;
   padding: .2rem .6rem;
+  display: inline-block;
 }
 
 .ua-role-select {
-  background: rgba(255,255,255,.07);
-  border: 1px solid;
+  background: #1a2118;
+  border: 1px solid rgba(255,255,255,.15);
   border-radius: 7px;
   color: #fff;
   font-size: .85rem;
@@ -169,9 +177,10 @@
   outline: none;
 }
 
-.ua-role-select option { background: #1a2840; }
+.ua-role-select:focus { border-color: #3dff6e; }
+.ua-role-select option { background: #0f1812; color: #fff; }
 
-.ua-date { color: rgba(255,255,255,.5); font-size: .85rem; }
+.ua-date { color: rgba(255,255,255,.45); font-size: .85rem; }
 
 /* Error */
 .ua-error {
@@ -193,8 +202,8 @@
 .ua-spin {
   width: 32px;
   height: 32px;
-  border: 3px solid rgba(255,255,255,.15);
-  border-top-color: #4ac878;
+  border: 3px solid rgba(61,255,110,.15);
+  border-top-color: #3dff6e;
   border-radius: 50%;
   animation: ua-rotate .7s linear infinite;
 }
@@ -214,7 +223,7 @@
   animation: ua-fadein .2s ease;
 }
 
-.ua-toast--ok  { background: #14532d; color: #86efac; border: 1px solid #16a34a44; }
+.ua-toast--ok  { background: #0a1f0e; color: #3dff6e; border: 1px solid rgba(61,255,110,.3); }
 .ua-toast--err { background: #450a0a; color: #fca5a5; border: 1px solid #dc262644; }
 
 @keyframes ua-fadein { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }

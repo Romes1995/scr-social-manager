@@ -38,7 +38,6 @@ const ROLE_LABELS = {
   gestionnaire: 'Gestionnaire',
   coach:        'Coach',
   score_live:   'Score Live',
-  lecteur:      'Lecteur',
 };
 
 const NAV_GROUPS = [

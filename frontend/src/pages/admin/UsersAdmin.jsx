@@ -3,27 +3,32 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getUsers, createUser, updateUserRole, deleteUser } from '../../services/api';
 import './UsersAdmin.css';
 
-const ROLES = ['admin', 'gestionnaire', 'coach', 'score_live', 'lecteur'];
+const ROLES = ['admin', 'gestionnaire', 'coach', 'score_live'];
 
 const ROLE_LABELS = {
   admin:        'Admin',
   gestionnaire: 'Gestionnaire',
   coach:        'Coach',
   score_live:   'Score Live',
-  lecteur:      'Lecteur',
 };
 
-const ROLE_COLORS = {
-  admin:        '#ef4444',
-  gestionnaire: '#f59e0b',
-  coach:        '#3b82f6',
-  score_live:   '#8b5cf6',
-  lecteur:      '#6b7280',
+// Styles solides pour garantir le contraste sur fond sombre
+const ROLE_BADGE_STYLES = {
+  admin:        { background: '#3dff6e',         color: '#0a0f0d', borderColor: '#3dff6e' },
+  gestionnaire: { background: 'rgba(245,158,11,.18)', color: '#fcd34d', borderColor: 'rgba(245,158,11,.4)' },
+  coach:        { background: 'rgba(59,130,246,.18)',  color: '#93c5fd', borderColor: 'rgba(59,130,246,.4)' },
+  score_live:   { background: 'rgba(139,92,246,.18)',  color: '#c4b5fd', borderColor: 'rgba(139,92,246,.4)' },
+};
+
+// Utilisé uniquement pour la bordure du select (couleur indicative)
+const ROLE_SELECT_BORDER = {
+  admin: '#3dff6e', gestionnaire: '#f59e0b', coach: '#3b82f6', score_live: '#8b5cf6',
 };
 
 function RoleBadge({ role }) {
+  const s = ROLE_BADGE_STYLES[role] ?? ROLE_BADGE_STYLES.gestionnaire;
   return (
-    <span className="ua-role-badge" style={{ background: ROLE_COLORS[role] + '22', color: ROLE_COLORS[role], borderColor: ROLE_COLORS[role] + '44' }}>
+    <span className="ua-role-badge" style={s}>
       {ROLE_LABELS[role] || role}
     </span>
   );
@@ -171,7 +176,7 @@ export default function UsersAdmin() {
                         className="ua-role-select"
                         value={u.role}
                         onChange={e => handleRoleChange(u.id, e.target.value)}
-                        style={{ borderColor: ROLE_COLORS[u.role] + '66' }}
+                        style={{ borderColor: (ROLE_SELECT_BORDER[u.role] ?? '#6b7280') + '66' }}
                       >
                         {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
                       </select>

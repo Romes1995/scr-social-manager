@@ -60,13 +60,13 @@ CREATE TABLE IF NOT EXISTS publications_programmees (
   CONSTRAINT pub_statut_check CHECK (statut IN ('en_attente', 'publie', 'erreur'))
 );
 
-CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live', 'lecteur');
+CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live');
 
 CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,
   username      VARCHAR(50) NOT NULL UNIQUE,
   password_hash TEXT        NOT NULL,
-  role          user_role   NOT NULL DEFAULT 'lecteur',
+  role          user_role   NOT NULL DEFAULT 'gestionnaire',
   created_at    TIMESTAMP   DEFAULT NOW(),
   last_login    TIMESTAMP
 );

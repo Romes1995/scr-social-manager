@@ -5,7 +5,7 @@ const bcrypt  = require('bcryptjs');
 const db      = require('../db');
 const { authenticateToken, requireRole } = require('../middleware/auth');
 
-const ROLES = ['admin', 'gestionnaire', 'coach', 'score_live', 'lecteur'];
+const ROLES = ['admin', 'gestionnaire', 'coach', 'score_live'];
 
 // Toutes les routes nécessitent auth + rôle admin
 router.use(authenticateToken, requireRole(['admin']));

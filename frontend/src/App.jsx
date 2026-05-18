@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import TopNav from './components/TopNav';
 import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
 import Login from './pages/Login';
 import HomePage from './pages/HomePage';
 import Programme from './pages/Programme';
@@ -13,10 +14,22 @@ import ConvocationPreparator from './pages/ConvocationPreparator';
 import UsersAdmin from './pages/admin/UsersAdmin';
 import './App.css';
 
-const ADMIN     = ['admin'];
-const GESTION   = ['admin', 'gestionnaire'];
-const SCORE     = ['admin', 'gestionnaire', 'score_live'];
-const CONVOC    = ['admin', 'gestionnaire', 'coach'];
+const ADMIN   = ['admin'];
+const GESTION = ['admin', 'gestionnaire'];
+const SCORE   = ['admin', 'gestionnaire', 'score_live'];
+const CONVOC  = ['admin', 'gestionnaire', 'coach'];
+
+// Page d'accueil publique pour les non-connectés, admin seulement pour les connectés
+// Les autres rôles sont renvoyés vers leur page principale
+const ROLE_HOME = { gestionnaire: '/programme', coach: '/convocation', score_live: '/score-live' };
+
+function HomeOrRedirect() {
+  const { isAuthenticated, user } = useAuth();
+  if (isAuthenticated && user?.role !== 'admin') {
+    return <Navigate to={ROLE_HOME[user.role] ?? '/programme'} replace />;
+  }
+  return <HomePage />;
+}
 
 export default function App() {
   const location = useLocation();
@@ -30,8 +43,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
 
-          {/* Pages publiques */}
-          <Route path="/" element={<HomePage />} />
+          {/* Accueil : public pour anonymes, admin uniquement pour les connectés */}
+          <Route path="/" element={<HomeOrRedirect />} />
 
           {/* Pages protégées */}
           <Route path="/programme"   element={<ProtectedRoute roles={GESTION}><Programme /></ProtectedRoute>} />
