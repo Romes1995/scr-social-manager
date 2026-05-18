@@ -8,14 +8,22 @@ const TEAMS = [
   { name: 'SCR 3', color: '#00bf63' },
 ];
 
-const EQUIPE_LABELS = { 'SCR 1': 'SCR 1', 'SCR 2': 'SCR 2', 'SCR 3': 'SCR 3' };
+// Convertit #rrggbb en rgba(r,g,b,a) — évite color-mix non fiable
+function hexAlpha(hex, a) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
 
 // ── Table classement par division ─────────────────────────────────────────────
 function DivisionTable({ team, division, rows, loading }) {
   const { name, color } = team;
+  const bgHighlight = hexAlpha(color, 0.13);
 
   return (
-    <div className="cl-card" style={{ '--tc': color }}>
+    <div className="cl-card" style={{ '--tc': color, borderTopColor: color }}>
       <div className="cl-card-header">
         <div>
           <div className="cl-card-team" style={{ color }}>{name}</div>
@@ -49,13 +57,25 @@ function DivisionTable({ team, division, rows, loading }) {
             </thead>
             <tbody>
               {rows.map((row, i) => (
-                <tr key={row.equipe} className={row.isSCR ? 'cl-row-scr' : ''}>
+                <tr
+                  key={row.equipe}
+                  style={row.isSCR ? { background: bgHighlight } : undefined}
+                >
                   <td className="cl-td-rank">{i + 1}</td>
-                  <td className="cl-td-name" title={row.equipe}>
-                    {row.isSCR && <span className="cl-scr-dot" style={{ background: color }} />}
+                  <td
+                    className="cl-td-name"
+                    title={row.equipe}
+                    style={row.isSCR ? { color, fontWeight: 700 } : undefined}
+                  >
+                    {row.isSCR && (
+                      <span className="cl-scr-dot" style={{ background: color }} />
+                    )}
                     {row.equipe}
                   </td>
-                  <td className={`cl-td-num cl-td-pts${row.isSCR ? ' cl-td-scr-pts' : ''}`}>
+                  <td
+                    className="cl-td-num cl-td-pts"
+                    style={row.isSCR ? { color } : undefined}
+                  >
                     {row.points}
                   </td>
                   <td className="cl-td-num">{row.joues}</td>
@@ -78,8 +98,20 @@ function DivisionTable({ team, division, rows, loading }) {
 }
 
 // ── Buteurs par équipe ────────────────────────────────────────────────────────
-function ButeursSection({ buteurs, loading }) {
+function ButeursSection({ buteurs, loading, classement }) {
   const [filter, setFilter] = useState('all');
+
+  // Mapping équipe → division (depuis les données classement déjà chargées)
+  const divisionMap = Object.fromEntries(
+    TEAMS.map(t => [t.name, classement[t.name]?.division ?? null])
+  );
+
+  const FILTER_OPTIONS = [
+    { key: 'all',   label: 'Tous',  sub: null,                color: '#3dff6e' },
+    { key: 'SCR 1', label: 'SCR 1', sub: divisionMap['SCR 1'], color: '#3dff6e' },
+    { key: 'SCR 2', label: 'SCR 2', sub: divisionMap['SCR 2'], color: '#5500ff' },
+    { key: 'SCR 3', label: 'SCR 3', sub: divisionMap['SCR 3'], color: '#00bf63' },
+  ];
 
   const filtered = filter === 'all'
     ? buteurs
@@ -90,15 +122,24 @@ function ButeursSection({ buteurs, loading }) {
       <div className="cl-buteurs-header">
         <h2 className="cl-section-title">Top Buteurs</h2>
         <div className="cl-filter-tabs">
-          {['all', 'SCR 1', 'SCR 2', 'SCR 3'].map(eq => (
-            <button
-              key={eq}
-              className={`cl-filter-tab${filter === eq ? ' cl-filter-tab--on' : ''}`}
-              onClick={() => setFilter(eq)}
-            >
-              {eq === 'all' ? 'Tous' : eq}
-            </button>
-          ))}
+          {FILTER_OPTIONS.map(({ key, label, sub, color }) => {
+            const active = filter === key;
+            return (
+              <button
+                key={key}
+                className={`cl-filter-tab${active ? ' cl-filter-tab--on' : ''}`}
+                style={active ? {
+                  background: hexAlpha(color, 0.15),
+                  borderColor: hexAlpha(color, 0.45),
+                  color,
+                } : undefined}
+                onClick={() => setFilter(key)}
+              >
+                <span className="cl-filter-label">{label}</span>
+                {sub && <span className="cl-filter-sub">{sub}</span>}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -109,14 +150,16 @@ function ButeursSection({ buteurs, loading }) {
       ) : (
         <div className="cl-buteurs-grid">
           {filtered.map((b, i) => {
-            const team = TEAMS.find(t => t.name === b.equipe);
+            const team  = TEAMS.find(t => t.name === b.equipe);
             const color = team?.color || '#3dff6e';
+            const div   = divisionMap[b.equipe];
             return (
               <div key={`${b.buteur}-${b.equipe}`} className="cl-scorer">
                 <span className="cl-scorer-rank" style={{ color }}>#{i + 1}</span>
                 <div className="cl-scorer-info">
                   <span className="cl-scorer-name">{b.buteur}</span>
                   <span className="cl-scorer-team" style={{ color }}>{b.equipe}</span>
+                  {div && <span className="cl-scorer-div">{div}</span>}
                 </div>
                 <div className="cl-scorer-buts" style={{ color }}>
                   {b.buts}
@@ -170,7 +213,11 @@ export default function Classements() {
         </section>
 
         {/* ── Top buteurs ── */}
-        <ButeursSection buteurs={buteurs} loading={btLoading} />
+        <ButeursSection
+          buteurs={buteurs}
+          loading={btLoading}
+          classement={classement}
+        />
       </div>
     </div>
   );

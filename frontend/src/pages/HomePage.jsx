@@ -1,4 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
+
+function hexAlpha(hex, a) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${a})`;
+}
 import { useNavigate } from 'react-router-dom';
 import photo1 from '../assets/photos/photo1.png';
 import photo2 from '../assets/photos/photo2.png';
@@ -357,11 +365,20 @@ function StandingCard({ teamNum, divisionRows, divisionName }) {
                   </thead>
                   <tbody>
                     {divisionRows.map((row, i) => (
-                      <tr key={row.equipe} className={row.isSCR ? 'sc-classement-scr' : ''}
-                          style={row.isSCR ? { '--rc': color } : {}}>
+                      <tr
+                        key={row.equipe}
+                        className={row.isSCR ? 'sc-classement-scr' : ''}
+                        style={row.isSCR ? { backgroundColor: hexAlpha(color, 0.13) } : undefined}
+                      >
                         <td className="sc-cl-rank">{i + 1}</td>
-                        <td className="sc-cl-name" title={row.equipe}>{row.equipe}</td>
-                        <td className="sc-cl-num sc-cl-pts">{row.points}</td>
+                        <td className="sc-cl-name" title={row.equipe}
+                            style={row.isSCR ? { color, fontWeight: 700 } : undefined}>
+                          {row.equipe}
+                        </td>
+                        <td className="sc-cl-num sc-cl-pts"
+                            style={row.isSCR ? { color } : undefined}>
+                          {row.points}
+                        </td>
                         <td className="sc-cl-num">{row.joues}</td>
                         <td className="sc-cl-num">{row.victoires}</td>
                         <td className="sc-cl-num">{row.nuls}</td>

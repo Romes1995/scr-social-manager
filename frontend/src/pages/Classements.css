@@ -37,7 +37,7 @@
 .cl-card {
   background: #0f1812;
   border: 1px solid rgba(255,255,255,.07);
-  border-top: 2px solid var(--tc, #3dff6e);
+  border-top-width: 2px;   /* couleur appliquée en inline via borderTopColor */
   border-radius: 12px;
   padding: 1.25rem;
   overflow: hidden;
@@ -54,6 +54,7 @@
   font-size: 1.1rem;
   font-weight: 800;
   margin-bottom: .2rem;
+  /* couleur appliquée en inline */
 }
 
 .cl-card-div {
@@ -98,10 +99,7 @@
 }
 
 .cl-table tbody tr:hover { background: rgba(255,255,255,.03); }
-
-.cl-row-scr {
-  background: color-mix(in srgb, var(--tc, #3dff6e) 10%, transparent) !important;
-}
+/* Highlight SCR : background appliqué en inline (rgba exact via hexAlpha) */
 
 .cl-td-rank {
   color: rgba(255,255,255,.25);
@@ -124,16 +122,14 @@
   gap: 5px;
 }
 
-.cl-row-scr .cl-td-name {
-  color: var(--tc, #3dff6e);
-  font-weight: 700;
-}
+/* couleur + fontWeight SCR appliqués en inline */
 
 .cl-scr-dot {
   flex-shrink: 0;
   width: 5px;
   height: 5px;
   border-radius: 50%;
+  /* background couleur équipe appliqué en inline */
 }
 
 .cl-td-num {
@@ -144,10 +140,9 @@
 
 .cl-td-pts {
   font-weight: 700;
-  color: rgba(255,255,255,.9) !important;
+  color: rgba(255,255,255,.9);
+  /* couleur SCR appliquée en inline */
 }
-
-.cl-td-scr-pts { color: var(--tc, #3dff6e) !important; }
 
 .cl-td-diff.pos { color: #3dff6e !important; }
 .cl-td-diff.neg { color: #f87171 !important; }
@@ -163,7 +158,7 @@
   width: 28px;
   height: 28px;
   border: 2.5px solid rgba(255,255,255,.12);
-  border-top-color: #3dff6e;
+  border-top-color: #3dff6e; /* override possible en inline */
   border-radius: 50%;
   animation: cl-rotate .7s linear infinite;
 }
@@ -187,7 +182,7 @@
 
 .cl-buteurs-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   margin-bottom: 1.25rem;
   gap: 1rem;
@@ -201,31 +196,60 @@
   color: #3dff6e;
 }
 
+/* ── Filtres ──────────────────────────────────────────────────────────────── */
 .cl-filter-tabs {
   display: flex;
   gap: .375rem;
+  flex-wrap: wrap;
 }
 
 .cl-filter-tab {
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.1);
-  border-radius: 6px;
+  border-radius: 8px;
   color: rgba(255,255,255,.55);
   cursor: pointer;
   font-size: .78rem;
   font-weight: 600;
-  padding: .3rem .7rem;
-  transition: all .15s;
+  padding: .35rem .75rem;
+  transition: background .15s, border-color .15s, color .15s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: .1rem;
+  text-align: left;
 }
 
-.cl-filter-tab:hover { background: rgba(255,255,255,.1); color: #fff; }
-
-.cl-filter-tab--on {
-  background: rgba(61,255,110,.15);
-  border-color: rgba(61,255,110,.4);
-  color: #3dff6e;
+.cl-filter-tab:hover {
+  background: rgba(255,255,255,.1);
+  color: #fff;
 }
 
+/* couleurs actives appliquées en inline (background, borderColor, color) */
+
+.cl-filter-label {
+  font-size: .78rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cl-filter-sub {
+  font-size: .62rem;
+  font-weight: 400;
+  color: rgba(255,255,255,.4);
+  line-height: 1;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cl-filter-tab--on .cl-filter-sub {
+  color: inherit;
+  opacity: .65;
+}
+
+/* ── Grille buteurs ───────────────────────────────────────────────────────── */
 .cl-buteurs-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
@@ -246,6 +270,7 @@
   font-size: .85rem;
   font-weight: 800;
   min-width: 28px;
+  /* color appliquée en inline */
 }
 
 .cl-scorer-info {
@@ -253,6 +278,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: .1rem;
 }
 
 .cl-scorer-name {
@@ -266,7 +292,16 @@
 
 .cl-scorer-team {
   font-size: .7rem;
-  font-weight: 500;
+  font-weight: 600;
+  /* color appliquée en inline */
+}
+
+.cl-scorer-div {
+  font-size: .6rem;
+  color: rgba(255,255,255,.3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .cl-scorer-buts {
@@ -277,6 +312,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  /* color appliquée en inline */
 }
 
 .cl-scorer-buts-label {

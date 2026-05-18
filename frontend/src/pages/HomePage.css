@@ -537,10 +537,8 @@
   border-top: 1px solid rgba(255,255,255,.04);
 }
 .sc-classement-table tbody tr:hover { background: rgba(255,255,255,.03); }
-.sc-classement-scr {
-  background: color-mix(in srgb, var(--rc, #4ac878) 12%, transparent) !important;
-  border-radius: 3px;
-}
+/* Background SCR : appliqué en inline via backgroundColor (rgba exact) */
+.sc-classement-scr { border-radius: 3px; }
 .sc-cl-rank {
   color: rgba(255,255,255,.3);
   padding: 5px 4px;
@@ -556,10 +554,9 @@
   font-weight: 500;
   color: rgba(255,255,255,.75);
 }
-.sc-classement-scr .sc-cl-name { color: var(--rc, #4ac878); font-weight: 700; }
+/* Couleurs SCR name/pts appliquées en inline */
 .sc-cl-num  { text-align: right; padding: 5px 4px; color: rgba(255,255,255,.6); }
-.sc-cl-pts  { font-weight: 700; color: rgba(255,255,255,.9) !important; }
-.sc-classement-scr .sc-cl-pts  { color: var(--rc, #4ac878) !important; }
+.sc-cl-pts  { font-weight: 700; color: rgba(255,255,255,.9); }
 .sc-cl-diff--pos { color: #4ac878 !important; }
 .sc-cl-diff--neg { color: #f87171 !important; }
 
