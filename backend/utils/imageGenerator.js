@@ -52,6 +52,9 @@ const POST_Y  = { 1:[394], 2:[279,509],  3:[284,433,582],   4:[228,364,500,637] 
 const STORY_828_Y = { 1:[736], 2:[603,869], 3:[522,788,1053], 4:[459,662,866,1069] };
 const CARRE_Y     = { 1:[540], 2:[350,730], 3:[250,540,830],  4:[200,400,600,800] };
 
+// TV : un fond par nombre de matchs (comme story/post), coordonnées Y mesurées sur chacun
+const TV_Y = { 1:[359], 2:[299,533], 3:[248,434,618] };
+
 // ─── Config PROGRAMME par format ─────────────────────────────────────────────
 //
 // Coordonnées mesurées sur les templates réels :
@@ -83,6 +86,15 @@ const CARRE_CFG = {
   logoSize: 100, logoLeftCx: 91, logoRightCx: 988,
   teamLeftCx: 380, teamRightCx: 700,
   teamFontSize: 24, dateOffsetY: 55, dateFontSize: 24, dateCx: 540,
+  dateColor: '#ffffff', teamColor: '#1a1a1a',
+};
+
+// TV 1280×720 : coordonnées mesurées sur les fonds réels (programme_tv_1match.png / 2matchs / 3matchs).
+// Particularité : date/heure sur 2 lignes centrées autour de cy (pas 1 ligne sous le nom).
+const TV_CFG = {
+  logoSize: 118, logoLeftCx: 185, logoRightCx: 1094,
+  teamLeftCx: 400, teamRightCx: 875,
+  teamFontSize: 26, dateFontSize: 18, dateCx: 635,
   dateColor: '#ffffff', teamColor: '#1a1a1a',
 };
 
@@ -265,6 +277,66 @@ async function renderFormat({ tpl, out, W, H, Y_MAP, CFG, sorted, n, logos }) {
     .toFile(out);
 }
 
+// ─── Rendu du format TV (fond unique 1280×720, 3 emplacements fixes) ─────────
+//
+// Diffère de renderFormat() par la mise en page date/heure : 2 lignes centrées
+// autour de cy (au lieu d'1 ligne sous le nom), donc pas de réutilisation directe.
+async function renderFormatTV({ tpl, out, sorted, n, logos }) {
+  const W = 1280, H = 720;
+  const { logoSize, logoLeftCx, logoRightCx,
+          teamLeftCx, teamRightCx, teamFontSize,
+          dateFontSize, dateCx, dateColor, teamColor } = TV_CFG;
+  const logoR = Math.floor(logoSize / 2);
+  const rows  = TV_Y[n];
+
+  const logoLayers = [];
+
+  for (let i = 0; i < n; i++) {
+    const m   = sorted[i];
+    const cy  = rows[i];
+    const top = Math.round(cy - logoR);
+
+    const scrOnLeft = m.domicile !== false;
+    const advNorm   = normalizeClubName(m.adversaire);
+    const advPath   = logos.color.get(advNorm) || null;
+
+    const scrBuf = await loadLogoBuf(fs.existsSync(LOGO_SCR) ? LOGO_SCR : null, logoSize);
+    const advBuf = await loadLogoBuf(advPath, logoSize);
+
+    const leftBuf  = scrOnLeft ? scrBuf  : advBuf;
+    const rightBuf = scrOnLeft ? advBuf  : scrBuf;
+
+    const lPos = await positionLogo(leftBuf  || makeGreyDisc(logoSize), logoSize, logoLeftCx,  W);
+    const rPos = await positionLogo(rightBuf || makeGreyDisc(logoSize), logoSize, logoRightCx, W);
+
+    if (lPos) logoLayers.push({ input: lPos.buf, left: lPos.left, top });
+    if (rPos) logoLayers.push({ input: rPos.buf, left: rPos.left, top });
+  }
+
+  let svgNodes = svgFontDefs();
+  for (let i = 0; i < n; i++) {
+    const m   = sorted[i];
+    const cy  = rows[i];
+    const scrOnLeft = m.domicile !== false;
+    const leftName  = esc(scrOnLeft ? m.equipe : m.adversaire);
+    const rightName = esc(scrOnLeft ? m.adversaire : m.equipe);
+    const dateTxt   = esc(fmtDate(m.date, null));
+    const heureTxt  = esc(fmtDate(null, m.heure));
+
+    svgNodes += svgText(teamLeftCx,  cy, teamFontSize, 'bold', teamColor, leftName);
+    svgNodes += svgText(teamRightCx, cy, teamFontSize, 'bold', teamColor, rightName);
+    svgNodes += svgText(dateCx, cy - 14, dateFontSize, 'normal', dateColor, dateTxt);
+    svgNodes += svgText(dateCx, cy + 14, dateFontSize, 'normal', dateColor, heureTxt);
+  }
+
+  const svgLayer = Buffer.from(`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${svgNodes}</svg>`);
+
+  await sharp(tpl)
+    .composite([...logoLayers, { input: svgLayer, top: 0, left: 0 }])
+    .png({ compressionLevel: 8 })
+    .toFile(out);
+}
+
 // ─── GÉNÉRATION PROGRAMME ─────────────────────────────────────────────────────
 
 async function generateProgramme(matchs) {
@@ -307,6 +379,13 @@ async function generateProgramme(matchs) {
     const carreOut = path.join(GENERATED, `programme_carre_${ts}.png`);
     await renderFormat({ tpl: carreTpl, out: carreOut, W:1080, H:1080, Y_MAP:CARRE_Y, CFG:CARRE_CFG, ...ctx });
     result.carre = `/uploads/generated/programme_carre_${ts}.png`;
+  }
+
+  const tvTpl = path.join(TEMPLATES, `programme_tv_${suffix}.png`);
+  if (fs.existsSync(tvTpl)) {
+    const tvOut = path.join(GENERATED, `programme_tv_${ts}.png`);
+    await renderFormatTV({ tpl: tvTpl, out: tvOut, ...ctx });
+    result.tv = `/uploads/generated/programme_tv_${ts}.png`;
   }
 
   return result;
