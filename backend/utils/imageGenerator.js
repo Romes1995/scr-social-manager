@@ -94,8 +94,9 @@ const CARRE_CFG = {
 const TV_CFG = {
   logoSize: 118, logoLeftCx: 185, logoRightCx: 1094,
   teamLeftCx: 400, teamRightCx: 875,
-  teamFontSize: 26, dateFontSize: 18, dateCx: 635,
-  dateColor: '#ffffff', teamColor: '#1a1a1a',
+  teamFontSize: 26, dateFontSize: 24, dateCx: 635,
+  dateColor: '#ffffff', teamColor: '#ffffff',
+  teamStroke: '#000000', teamStrokeWidth: 2,
 };
 
 // ─── Normalisation ────────────────────────────────────────────────────────────
@@ -285,7 +286,8 @@ async function renderFormatTV({ tpl, out, sorted, n, logos }) {
   const W = 1280, H = 720;
   const { logoSize, logoLeftCx, logoRightCx,
           teamLeftCx, teamRightCx, teamFontSize,
-          dateFontSize, dateCx, dateColor, teamColor } = TV_CFG;
+          dateFontSize, dateCx, dateColor, teamColor,
+          teamStroke, teamStrokeWidth } = TV_CFG;
   const logoR = Math.floor(logoSize / 2);
   const rows  = TV_Y[n];
 
@@ -323,10 +325,10 @@ async function renderFormatTV({ tpl, out, sorted, n, logos }) {
     const dateTxt   = esc(fmtDate(m.date, null));
     const heureTxt  = esc(fmtDate(null, m.heure));
 
-    svgNodes += svgText(teamLeftCx,  cy, teamFontSize, 'bold', teamColor, leftName);
-    svgNodes += svgText(teamRightCx, cy, teamFontSize, 'bold', teamColor, rightName);
-    svgNodes += svgText(dateCx, cy - 14, dateFontSize, 'normal', dateColor, dateTxt);
-    svgNodes += svgText(dateCx, cy + 14, dateFontSize, 'normal', dateColor, heureTxt);
+    svgNodes += svgText(teamLeftCx,  cy, teamFontSize, 'bold', teamColor, leftName,  'Arial, Helvetica, sans-serif', teamStroke, teamStrokeWidth);
+    svgNodes += svgText(teamRightCx, cy, teamFontSize, 'bold', teamColor, rightName, 'Arial, Helvetica, sans-serif', teamStroke, teamStrokeWidth);
+    svgNodes += svgText(dateCx, cy - 16, dateFontSize, 'normal', dateColor, dateTxt);
+    svgNodes += svgText(dateCx, cy + 16, dateFontSize, 'normal', dateColor, heureTxt);
   }
 
   const svgLayer = Buffer.from(`<svg width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">${svgNodes}</svg>`);
