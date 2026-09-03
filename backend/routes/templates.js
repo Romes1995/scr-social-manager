@@ -337,6 +337,8 @@ router.post('/generate-programme', async (req, res) => {
       post: result.post,
       story_url: base + result.story,
       post_url: base + result.post,
+      // TV optionnel : présent seulement si programme_tv_<n>match(s).png existe (cf. generateProgramme)
+      ...(result.tv ? { tv: result.tv, tv_url: base + result.tv } : {}),
       nb_matchs: matchs.length,
     });
   } catch (err) {
