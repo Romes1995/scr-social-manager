@@ -118,17 +118,18 @@ export default function Programme() {
       if (res.data.matchs && res.data.matchs.length > 0) {
         const saveRes = await saveFFFMatches(res.data.matchs);
         const saved   = saveRes.data.saved   || 0;
-        const skipped = saveRes.data.skipped || 0;
-        const msg = skipped > 0
-          ? `${saved} match(s) importé(s), ${skipped} déjà existant(s) ignoré(s)`
+        const updated = saveRes.data.updated || 0;
+        const msg = updated > 0
+          ? `${saved} match(s) créé(s), ${updated} mis à jour`
           : `${saved} match(s) importé(s) depuis la FFF`;
         showAlert('success', msg);
         loadMatches();
       } else {
         showAlert('warning', res.data.message || 'Aucun match trouvé sur la page FFF');
       }
-    } catch {
-      showAlert('error', 'Impossible d\'importer depuis la FFF');
+    } catch (err) {
+      const msg = err.response?.data?.error || 'Impossible d\'importer depuis la FFF';
+      showAlert('error', msg);
     } finally {
       setImporting(false);
     }

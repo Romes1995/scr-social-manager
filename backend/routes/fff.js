@@ -66,6 +66,25 @@ function parseMatch(raw) {
   };
 }
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// L'API DOFA est derrière Akamai et bloque parfois une requête ponctuelle
+// (403 "Application momentanément indisponible") sans que le club ne soit
+// réellement banni : une seconde tentative après un court délai suffit.
+async function getWithRetry(url, options) {
+  try {
+    return await axios.get(url, options);
+  } catch (err) {
+    const status = err.response?.status;
+    if (status === 403 || status >= 500) {
+      console.warn(`[FFF] HTTP ${status} sur ${url}, nouvelle tentative dans 2s…`);
+      await sleep(2000);
+      return axios.get(url, options);
+    }
+    throw err;
+  }
+}
+
 // Récupère TOUS les matchs du club SCR (toutes pages, toute la saison)
 async function fetchAllMatchesDOFA() {
   const allRaw = [];
@@ -74,7 +93,7 @@ async function fetchAllMatchesDOFA() {
   console.log(`[FFF] Récupération des matchs SCR (cl_no=${SCR_CL_NO}) depuis ${DOFA_BASE}…`);
 
   while (url) {
-    const resp = await axios.get(url, {
+    const resp = await getWithRetry(url, {
       timeout: 10000,
       headers: {
         'Accept': 'application/json, */*',
@@ -153,6 +172,17 @@ router.get('/import', async (req, res) => {
       const msg = 'Impossible de joindre l\'API FFF (api-dofa.fff.fr)';
       console.error('[FFF Import]', msg, err.message);
       return res.status(503).json({ error: msg, detail: err.message });
+    }
+    const status = err.response?.status;
+    if (status === 403) {
+      const msg = 'L\'API FFF (api-dofa.fff.fr) a bloqué la requête (403, protection anti-bot Akamai) même après une nouvelle tentative. Réessayez dans quelques minutes.';
+      console.error('[FFF Import]', msg);
+      return res.status(502).json({ error: msg });
+    }
+    if (status >= 500) {
+      const msg = `L\'API FFF (api-dofa.fff.fr) est indisponible (HTTP ${status}) même après une nouvelle tentative. Réessayez plus tard.`;
+      console.error('[FFF Import]', msg);
+      return res.status(502).json({ error: msg });
     }
     console.error('[FFF Import] Erreur inattendue :', err.message);
     res.status(500).json({ error: 'Erreur lors de l\'import FFF', detail: err.message });
