@@ -21,6 +21,10 @@ const SCORER_FS = 12;
 const SCORER_LH = 14;
 const SCORER_GAP_Y = 20; // décalage sous le centre du nom SCR
 
+// TAB (tirs au but) — ligne centrée sous le score principal
+const TAB_FS = 15;
+const TAB_OFFSET_Y = 42;
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function esc(str) {
@@ -259,6 +263,14 @@ async function generateResultat({ matches, outputPath } = {}) {
       cx: coord.nomD.cx, cy: coord.nomD.cy, fs: coord.nomD.fs,
       weight: 'bold', family: arial, content: match.nomDroite,
     });
+
+    // ── TAB (tirs au but), sous le score principal ────────────────────────────
+    if (match.tab) {
+      svgNodes += textNode({
+        cx: coord.score.cx, cy: coord.score.cy + TAB_OFFSET_Y, fs: TAB_FS,
+        weight: 'bold', family: arial, content: match.tab,
+      });
+    }
 
     // ── Buteurs ────────────────────────────────────────────────────────────────
     if (match.scorers) {

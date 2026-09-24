@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { getUsers, createUser, updateUserRole, deleteUser } from '../../services/api';
 import './UsersAdmin.css';
 
@@ -35,7 +34,6 @@ function RoleBadge({ role }) {
 }
 
 export default function UsersAdmin() {
-  const { user: me } = useAuth();
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
@@ -163,33 +161,24 @@ export default function UsersAdmin() {
             </thead>
             <tbody>
               {users.map(u => (
-                <tr key={u.id} className={u.id === me.id ? 'ua-row--me' : ''}>
-                  <td className="ua-username">
-                    {u.username}
-                    {u.id === me.id && <span className="ua-me-badge">moi</span>}
-                  </td>
+                <tr key={u.id}>
+                  <td className="ua-username">{u.username}</td>
                   <td>
-                    {u.id === me.id ? (
-                      <RoleBadge role={u.role} />
-                    ) : (
-                      <select
-                        className="ua-role-select"
-                        value={u.role}
-                        onChange={e => handleRoleChange(u.id, e.target.value)}
-                        style={{ borderColor: (ROLE_SELECT_BORDER[u.role] ?? '#6b7280') + '66' }}
-                      >
-                        {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
-                      </select>
-                    )}
+                    <select
+                      className="ua-role-select"
+                      value={u.role}
+                      onChange={e => handleRoleChange(u.id, e.target.value)}
+                      style={{ borderColor: (ROLE_SELECT_BORDER[u.role] ?? '#6b7280') + '66' }}
+                    >
+                      {ROLES.map(r => <option key={r} value={r}>{ROLE_LABELS[r]}</option>)}
+                    </select>
                   </td>
                   <td className="ua-date">{fmtDate(u.created_at)}</td>
                   <td className="ua-date">{fmtDate(u.last_login)}</td>
                   <td>
-                    {u.id !== me.id && (
-                      <button className="ua-btn ua-btn--danger" onClick={() => handleDelete(u.id, u.username)}>
-                        Supprimer
-                      </button>
-                    )}
+                    <button className="ua-btn ua-btn--danger" onClick={() => handleDelete(u.id, u.username)}>
+                      Supprimer
+                    </button>
                   </td>
                 </tr>
               ))}

@@ -9,22 +9,9 @@ const api = axios.create({
   timeout: 15000,
 });
 
-// Injecte le JWT dans chaque requête
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('scr_token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-// 401 → déconnexion + redirect login
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401 && !err.config?.url?.includes('/auth/login')) {
-      localStorage.removeItem('scr_token');
-      localStorage.removeItem('scr_user');
-      window.location.href = '/login';
-    }
     console.error('[API Error]', err.config?.url, err.response?.data || err.message);
     return Promise.reject(err);
   }
@@ -136,10 +123,6 @@ export const getPublications = () => api.get('/publish/programmes');
 // --- Public (pas de token requis) ---
 export const getClassementParEquipe = (params) => api.get('/public/classement-par-equipe', { params });
 export const getButeursParEquipe    = ()        => api.get('/public/buteurs-par-equipe');
-
-// --- Auth ---
-export const loginUser      = (data)       => api.post('/auth/login', data);
-export const getMe          = ()           => api.get('/auth/me');
 
 // --- Users (admin) ---
 export const getUsers       = ()           => api.get('/users');

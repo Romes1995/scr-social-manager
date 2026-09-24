@@ -67,7 +67,7 @@ router.get('/buteurs', async (req, res) => {
         FROM matches
         WHERE statut = 'termine' AND cardinality(buteurs) > 0
       ) sub
-      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> ''
+      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> '' AND LOWER(TRIM(sub.buteur)) <> 'csc'
       GROUP BY sub.buteur
       ORDER BY buts DESC, sub.buteur ASC
       LIMIT 50
@@ -143,7 +143,7 @@ router.get('/buteurs-par-equipe', async (req, res) => {
         FROM matches
         WHERE statut = 'termine' AND cardinality(buteurs) > 0
       ) sub
-      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> ''
+      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> '' AND LOWER(TRIM(sub.buteur)) <> 'csc'
       GROUP BY sub.equipe, sub.buteur
       ORDER BY sub.equipe, buts DESC, sub.buteur ASC
     `);
@@ -275,7 +275,7 @@ router.get('/carousel/:teamId', async (req, res) => {
           FROM matches
           WHERE equipe = $1 AND statut = 'termine' AND cardinality(buteurs) > 0
         ) sub
-        WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> ''
+        WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> '' AND LOWER(TRIM(sub.buteur)) <> 'csc'
         GROUP BY sub.buteur
         ORDER BY buts DESC
         LIMIT 1
@@ -345,7 +345,7 @@ router.get('/vitrine/:teamId', async (req, res) => {
         FROM matches
         WHERE equipe = $1 AND statut = 'termine' AND cardinality(buteurs) > 0
       ) sub
-      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> ''
+      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> '' AND LOWER(TRIM(sub.buteur)) <> 'csc'
       GROUP BY sub.buteur
       ORDER BY buts DESC
       LIMIT 1

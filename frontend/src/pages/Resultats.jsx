@@ -3,21 +3,34 @@ import { getMatches, createMatch, updateMatch, deleteMatch, generateResultatWeek
 import './Resultats.css';
 
 const EQUIPES = ['SCR 1', 'SCR 2', 'SCR 3'];
-const DIVISIONS = ['District 1 Alsace', 'District 5 Alsace', 'District 7 Alsace', 'District 7 Accession', 'Coupe de France', 'Coupe Alsace', 'Coupe Réserves', 'Challenge Réserves', 'Autre'];
+const DIVISIONS = ['District 1 Alsace', 'District 5 Alsace', 'District 7 Alsace', 'District 7 Accession', 'Coupe de France', 'Coupe Alsace', 'Coupe Réserves', 'Challenge Réserves', 'Amical', 'Autre'];
+const EQUIPE_COLORS = { 'SCR 1': '#3dff6e', 'SCR 2': '#5500ff', 'SCR 3': '#00bf63' };
 
 const EMPTY_FORM = {
   equipe: 'SCR 1', adversaire: '', date: '', heure: '',
   domicile: true, division: 'District 1 Alsace', score_scr: 0, score_adv: 0,
   buteurs: '', statut: 'termine',
+  tab_domicile: '', tab_exterieur: '',
 };
 
 // ── Helpers classification ─────────────────────────────────────────────────────
 
 const isChampionnat = (division) => /district/i.test(division || '');
+const isAmical      = (division) => /amical/i.test(division || '');
+const isCoupe       = (division) => !isChampionnat(division) && !isAmical(division);
 
 const competitionBadge = (division) => {
   if (isChampionnat(division)) return { label: 'Champ.', color: '#15803d', bg: '#dcfce7' };
+  if (isAmical(division))      return { label: 'Amical', color: '#0369a1', bg: '#e0f2fe' };
   return { label: 'Coupe', color: '#c2410c', bg: '#ffedd5' };
+};
+
+// TAB : perspective SCR déduite du bit domicile/extérieur du match
+const getTabResult = (match) => {
+  if (match.tab_domicile == null || match.tab_exterieur == null) return null;
+  const tabScr = match.domicile ? match.tab_domicile : match.tab_exterieur;
+  const tabAdv = match.domicile ? match.tab_exterieur : match.tab_domicile;
+  return { win: tabScr > tabAdv, tabScr, tabAdv };
 };
 
 // Retourne 'd7' ou 'accession' pour les matchs SCR 3 championnat
@@ -76,6 +89,15 @@ function MatchTable({ matches, onEdit, onDelete, showTeamCol = false, joueurs = 
                   <strong style={{ fontFamily: 'Bebas Neue', fontSize: 18, letterSpacing: 1 }}>
                     {match.score_scr ?? '-'} - {match.score_adv ?? '-'}
                   </strong>
+                  {(() => {
+                    const tab = getTabResult(match);
+                    if (!tab) return null;
+                    return (
+                      <div className="tab-badge" style={{ color: EQUIPE_COLORS[match.equipe] || EQUIPE_COLORS['SCR 1'] }}>
+                        {tab.win ? 'Vict. TAB' : 'Déf. TAB'} {tab.tabScr}-{tab.tabAdv}
+                      </div>
+                    );
+                  })()}
                 </td>
                 <td>
                   <span className={`result-badge result-badge--${res.cls}`}>{res.label}</span>
@@ -97,6 +119,7 @@ function MatchTable({ matches, onEdit, onDelete, showTeamCol = false, joueurs = 
                               onChange={e => onSlotChange(match.id, slot.key, e.target.value)}
                             >
                               <option value="">But N°{i + 1} — Sélectionner</option>
+                              <option value="CSC">CSC (contre son camp)</option>
                               {joueurs.map(j => {
                                 const name = `${j.prenom} ${j.nom}`;
                                 return <option key={j.id} value={name}>{name}</option>;
@@ -223,9 +246,25 @@ export default function Resultats() {
       score_adv: match.score_adv || 0,
       buteurs:   (match.buteurs || []).join(', '),
       statut:    'termine',
+      tab_domicile:  match.tab_domicile  ?? '',
+      tab_exterieur: match.tab_exterieur ?? '',
     });
     setShowModal(true);
   };
+
+  // Bloc TAB visible seulement en Coupe + score à égalité
+  const showTab = isCoupe(form.division)
+    && form.score_scr !== '' && form.score_adv !== ''
+    && Number(form.score_scr) === Number(form.score_adv);
+
+  // Vide les valeurs saisies si les conditions ne sont plus remplies
+  useEffect(() => {
+    if (!showTab) {
+      setForm(f => (f.tab_domicile === '' && f.tab_exterieur === '')
+        ? f
+        : { ...f, tab_domicile: '', tab_exterieur: '' });
+    }
+  }, [showTab]);
 
   const handleSave = async () => {
     if (!form.adversaire.trim()) { showAlert('error', "Le nom de l'adversaire est requis"); return; }
@@ -236,6 +275,8 @@ export default function Resultats() {
         score_scr: parseInt(form.score_scr) || 0,
         score_adv: parseInt(form.score_adv) || 0,
         buteurs: form.buteurs ? form.buteurs.split(',').map(b => b.trim()).filter(Boolean) : [],
+        tab_domicile:  showTab && form.tab_domicile  !== '' ? parseInt(form.tab_domicile, 10)  : null,
+        tab_exterieur: showTab && form.tab_exterieur !== '' ? parseInt(form.tab_exterieur, 10) : null,
       };
       if (editMatch) { await updateMatch(editMatch.id, data); showAlert('success', 'Résultat modifié'); }
       else           { await createMatch(data);               showAlert('success', 'Résultat ajouté'); }
@@ -357,8 +398,9 @@ export default function Resultats() {
     return base;
   }, [matches, filterEquipe]);
 
-  const champMatches = useMemo(() => byTeam.filter(m => isChampionnat(m.division)), [byTeam]);
-  const coupeMatches = useMemo(() => byTeam.filter(m => !isChampionnat(m.division)), [byTeam]);
+  const champMatches  = useMemo(() => byTeam.filter(m => isChampionnat(m.division)), [byTeam]);
+  const coupeMatches  = useMemo(() => byTeam.filter(m => !isChampionnat(m.division) && !isAmical(m.division)), [byTeam]);
+  const amicalMatches = useMemo(() => byTeam.filter(m => isAmical(m.division)), [byTeam]);
 
   // Pour SCR 3 : sous-groupes de phase championnat
   const scr3ChampFiltered = useMemo(() => {
@@ -643,6 +685,23 @@ export default function Resultats() {
               </div>
             </div>
           )}
+
+          {/* ── Section Amical ── */}
+          {amicalMatches.length > 0 && (
+            <div className="section">
+              <div className="resultats-section-header">
+                <h2 className="section-title" style={{ margin: 0 }}>
+                  <span className="competition-badge competition-badge--amical">Amical</span>
+                </h2>
+                <span className="badge badge-termine">
+                  {amicalMatches.length} match{amicalMatches.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <div className="card">
+                <MatchTable matches={amicalMatches} onEdit={openEdit} onDelete={handleDelete} showTeamCol={showTeamCol} joueurs={joueurs} pendingButeurs={pendingButeurs} onSlotChange={handleSlotChange} onAddSlot={handleAddSlot} onRemoveSlot={handleRemoveSlot} />
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -738,6 +797,21 @@ export default function Resultats() {
                     onChange={e => setForm(f => ({ ...f, score_adv: e.target.value }))} />
                 </div>
               </div>
+
+              {showTab && (
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Tirs au but — Domicile</label>
+                    <input type="number" min="0" className="form-control" value={form.tab_domicile}
+                      onChange={e => setForm(f => ({ ...f, tab_domicile: e.target.value }))} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Tirs au but — Extérieur</label>
+                    <input type="number" min="0" className="form-control" value={form.tab_exterieur}
+                      onChange={e => setForm(f => ({ ...f, tab_exterieur: e.target.value }))} />
+                  </div>
+                </div>
+              )}
 
               <div className="form-group">
                 <label className="form-label">Buteurs (séparés par des virgules)</label>

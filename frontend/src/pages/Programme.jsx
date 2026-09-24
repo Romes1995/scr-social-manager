@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   getMatches, createMatch, updateMatch, deleteMatch,
-  importFFF, saveFFFMatches, publishBoth, generateProgramme,
-  publishFacebook, publishInstagram, getClubs,
+  importFFF, saveFFFMatches, publishBoth, getClubs,
 } from '../services/api';
 import ProgrammeTextGenerator from '../components/ProgrammeTextGenerator';
+import ProgrammeVisualGenerator from '../components/ProgrammeVisualGenerator';
 
 const EQUIPES = ['SCR 1', 'SCR 2', 'SCR 3'];
-const DIVISIONS = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'Coupe'];
+const DIVISIONS = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'Coupe', 'Amical'];
 
 const EMPTY_FORM = {
   equipe: 'SCR 1', adversaire: '', logo_adversaire: '', date: '',
@@ -25,11 +25,6 @@ export default function Programme() {
   const [alert, setAlert] = useState(null);
   const [publishing, setPublishing] = useState(null);
   const [clubs, setClubs] = useState([]);
-  const [showVisuels, setShowVisuels] = useState(false);
-  const [selectedMatchIds, setSelectedMatchIds] = useState([]);
-  const [generating, setGenerating] = useState(false);
-  const [visuels, setVisuels] = useState(null); // { story_url, post_url }
-  const [publishingVisuel, setPublishingVisuel] = useState(null);
 
   const showAlert = (type, msg) => {
     setAlert({ type, msg });
@@ -147,51 +142,6 @@ export default function Programme() {
     }
   };
 
-  const toggleMatchSelection = (id) => {
-    setSelectedMatchIds(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : prev.length < 4 ? [...prev, id] : prev
-    );
-  };
-
-  const handleGenerateVisuels = async () => {
-    const selected = matches.filter(m => selectedMatchIds.includes(m.id));
-    if (selected.length === 0) { showAlert('error', 'Sélectionnez au moins un match'); return; }
-    setGenerating(true);
-    setVisuels(null);
-    try {
-      const payload = selected.map(m => ({
-        equipe: m.equipe,
-        adversaire: m.adversaire,
-        logo_adversaire: m.logo_adversaire || null,
-        date: m.date,
-        heure: m.heure,
-        domicile: m.domicile,
-      }));
-      const res = await generateProgramme(payload);
-      setVisuels(res.data);
-      showAlert('success', 'Visuels générés avec succès');
-    } catch (err) {
-      showAlert('error', err.response?.data?.error || 'Erreur lors de la génération');
-    } finally {
-      setGenerating(false);
-    }
-  };
-
-  const handlePublishVisuel = async (type) => {
-    if (!visuels) return;
-    setPublishingVisuel(type);
-    try {
-      const imageUrl = type === 'facebook' ? visuels.post_url : visuels.story_url;
-      const fn = type === 'facebook' ? publishFacebook : publishInstagram;
-      await fn({ image_url: imageUrl, message: 'Programme du week-end SCR Roeschwoog' });
-      showAlert('success', `Publié sur ${type === 'facebook' ? 'Facebook' : 'Instagram'} (simulation)`);
-    } catch {
-      showAlert('error', `Erreur lors de la publication ${type}`);
-    } finally {
-      setPublishingVisuel(null);
-    }
-  };
-
   const formatDate = (d) => {
     if (!d) return '-';
     return new Date(d).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
@@ -250,9 +200,6 @@ export default function Programme() {
         <div className="actions-bar">
           <button className="btn btn-ghost" onClick={handleImportFFF} disabled={importing}>
             {importing ? '⏳' : '🔄'} Import FFF
-          </button>
-          <button className="btn btn-secondary" onClick={() => { setShowVisuels(v => !v); setVisuels(null); setSelectedMatchIds([]); }}>
-            🖼️ Générer les visuels
           </button>
           <button className="btn btn-primary" onClick={openCreate}>
             + Ajouter un match
@@ -343,122 +290,15 @@ export default function Programme() {
                   matchIds={group.matchs.map(m => m.id)}
                   weekendLabel={group.label}
                 />
+                <ProgrammeVisualGenerator
+                  matches={group.matchs}
+                  fallbackDate={group.vendredi ? group.vendredi.toISOString().slice(0, 10) : null}
+                />
               </div>
             ))}
           </div>
         )}
       </div>
-
-      {showVisuels && (
-        <div className="card" style={{ marginTop: 24 }}>
-          <div className="card-header">
-            <h2>Générer les visuels du week-end</h2>
-            <span style={{ fontSize: 13, color: '#888' }}>Sélectionnez jusqu'à 4 matchs</span>
-          </div>
-          <div style={{ padding: '16px 20px' }}>
-            {matches.length === 0 ? (
-              <p style={{ color: '#888' }}>Aucun match programmé à sélectionner.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-                {matches.map(m => (
-                  <label key={m.id} style={{
-                    display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer',
-                    padding: '10px 14px', borderRadius: 8, border: '1px solid',
-                    borderColor: selectedMatchIds.includes(m.id) ? 'var(--scr-green)' : '#e0e0e0',
-                    background: selectedMatchIds.includes(m.id) ? '#f0f9f4' : '#fafafa',
-                    opacity: !selectedMatchIds.includes(m.id) && selectedMatchIds.length >= 4 ? 0.5 : 1,
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={selectedMatchIds.includes(m.id)}
-                      onChange={() => toggleMatchSelection(m.id)}
-                      disabled={!selectedMatchIds.includes(m.id) && selectedMatchIds.length >= 4}
-                    />
-                    <span style={{ fontWeight: 600, minWidth: 60 }}>{m.equipe}</span>
-                    <span>vs <strong>{m.adversaire}</strong></span>
-                    <span style={{ color: '#888', marginLeft: 'auto', fontSize: 13 }}>
-                      {formatDate(m.date)}{m.heure ? ` · ${m.heure.slice(0,5)}` : ''}
-                      {' · '}<span className={`badge ${m.domicile ? 'badge-programme' : 'badge-termine'}`} style={{ fontSize: 11 }}>{m.domicile ? 'Dom' : 'Ext'}</span>
-                    </span>
-                  </label>
-                ))}
-              </div>
-            )}
-
-            <button
-              className="btn btn-primary"
-              onClick={handleGenerateVisuels}
-              disabled={generating || selectedMatchIds.length === 0}
-              style={{ marginBottom: visuels ? 24 : 0 }}
-            >
-              {generating ? '⏳ Génération en cours...' : `🖼️ Générer (${selectedMatchIds.length} match${selectedMatchIds.length > 1 ? 's' : ''})`}
-            </button>
-
-            {visuels && (
-              <div>
-                <h3 style={{ marginBottom: 16, fontSize: 16 }}>Aperçu des visuels générés</h3>
-                <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap' }}>
-                  {/* Story */}
-                  <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                    <p style={{ fontWeight: 600, marginBottom: 8, color: '#444' }}>Story Instagram (1080×1920)</p>
-                    <img
-                      src={visuels.story_url}
-                      alt="Story"
-                      style={{ width: 180, borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'block', marginBottom: 12 }}
-                    />
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => handlePublishVisuel('instagram')}
-                        disabled={publishingVisuel !== null}
-                        style={{ fontSize: 12 }}
-                      >
-                        {publishingVisuel === 'instagram' ? '⏳' : '📸'} Instagram
-                      </button>
-                      <a
-                        href={visuels.story_url}
-                        download
-                        className="btn btn-sm btn-ghost"
-                        style={{ fontSize: 12 }}
-                      >
-                        ⬇️ Télécharger
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Post */}
-                  <div style={{ flex: '0 0 auto', textAlign: 'center' }}>
-                    <p style={{ fontWeight: 600, marginBottom: 8, color: '#444' }}>Post Facebook (940×788)</p>
-                    <img
-                      src={visuels.post_url}
-                      alt="Post"
-                      style={{ width: 280, borderRadius: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.15)', display: 'block', marginBottom: 12 }}
-                    />
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-                      <button
-                        className="btn btn-sm btn-primary"
-                        onClick={() => handlePublishVisuel('facebook')}
-                        disabled={publishingVisuel !== null}
-                        style={{ fontSize: 12, background: '#1877f2', borderColor: '#1877f2' }}
-                      >
-                        {publishingVisuel === 'facebook' ? '⏳' : '👍'} Facebook
-                      </button>
-                      <a
-                        href={visuels.post_url}
-                        download
-                        className="btn btn-sm btn-ghost"
-                        style={{ fontSize: 12 }}
-                      >
-                        ⬇️ Télécharger
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {showModal && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowModal(false)}>

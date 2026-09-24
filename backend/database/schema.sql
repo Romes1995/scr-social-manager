@@ -33,6 +33,8 @@ CREATE TABLE IF NOT EXISTS matches (
   score_scr INTEGER DEFAULT 0,
   score_adv INTEGER DEFAULT 0,
   buteurs TEXT[] DEFAULT '{}',
+  tab_domicile INTEGER,
+  tab_exterieur INTEGER,
   statut VARCHAR(20) DEFAULT 'programme',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),

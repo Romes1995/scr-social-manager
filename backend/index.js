@@ -4,8 +4,6 @@ const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
 
-const { authenticateToken } = require('./middleware/auth');
-
 const app  = express();
 const PORT = process.env.PORT || 3001;
 
@@ -31,32 +29,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(uploadsDir));
 app.use('/assets',  express.static(path.join(__dirname, 'assets')));
 
-// ── Routes publiques ──────────────────────────────────────────────────────────
-// Accessibles sans token (site fans + login)
-app.use('/api/public', require('./routes/public'));
-app.use('/api/auth',   require('./routes/auth'));
-
-// Ces routes sont publiques (homepage visible par les visiteurs non connectés)
-// Doivent être enregistrées AVANT app.use('/api/matches', authenticateToken, ...)
-const matchesRoutes = require('./routes/matches');
-app.get('/api/matches/standings',   matchesRoutes.standingsHandler);
-app.get('/api/matches/top-scorers', matchesRoutes.topScorersHandler);
-
-// Health check (public)
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'SCR Social Manager API', timestamp: new Date() });
 });
 
-// ── Routes protégées ──────────────────────────────────────────────────────────
-// Toutes nécessitent un JWT valide
-app.use('/api/fff',        authenticateToken, require('./routes/fff'));
-app.use('/api/matches',    authenticateToken, require('./routes/matches'));
-app.use('/api/clubs',      authenticateToken, require('./routes/clubs'));
-app.use('/api/joueurs',    authenticateToken, require('./routes/joueurs'));
-app.use('/api/templates',  authenticateToken, require('./routes/templates'));
-app.use('/api/publish',    authenticateToken, require('./routes/publish'));
-app.use('/api/convocation',authenticateToken, require('./routes/convocation'));
-app.use('/api/users',      require('./routes/users')); // auth gérée dans le routeur
+// ── Routes ────────────────────────────────────────────────────────────────────
+app.use('/api/public',     require('./routes/public'));
+app.use('/api/fff',        require('./routes/fff'));
+app.use('/api/matches',    require('./routes/matches'));
+app.use('/api/clubs',      require('./routes/clubs'));
+app.use('/api/joueurs',    require('./routes/joueurs'));
+app.use('/api/templates',  require('./routes/templates'));
+app.use('/api/publish',    require('./routes/publish'));
+app.use('/api/convocation',require('./routes/convocation'));
+app.use('/api/users',      require('./routes/users'));
 
 // ── Handlers génériques ───────────────────────────────────────────────────────
 app.use((req, res) => {

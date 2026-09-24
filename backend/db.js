@@ -1,5 +1,9 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 require('dotenv').config();
+
+// Garde les champs DATE PostgreSQL comme strings 'YYYY-MM-DD' au lieu de les
+// convertir en Date JS (qui décale d'un jour à cause du fuseau Europe/Paris → UTC)
+types.setTypeParser(1082, val => val);
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',

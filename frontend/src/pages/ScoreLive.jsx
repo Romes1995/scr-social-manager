@@ -316,7 +316,7 @@ export default function ScoreLive() {
   // Workflow complet : But SCR → 6 étapes
   const handleGoalSCR = async () => {
     if (!selectedJoueur || !selectedMatch) return;
-    const nomComplet = `${selectedJoueur.prenom} ${selectedJoueur.nom}`;
+    const nomComplet = selectedJoueur.id === 'csc' ? 'CSC' : `${selectedJoueur.prenom} ${selectedJoueur.nom}`;
     const videoUrl   = selectedJoueur.video_celebration_url
       ? `${API_BASE_URL}${selectedJoueur.video_celebration_url}`
       : null;
@@ -621,6 +621,14 @@ export default function ScoreLive() {
                       <h2>Ajouter buteur</h2>
                     </div>
                     <div className="card-body">
+                      <button
+                        className="btn btn-ghost w-full"
+                        style={{ justifyContent: 'flex-start', textAlign: 'left', marginBottom: joueurs.length > 0 ? 8 : 0 }}
+                        onClick={() => handleAction('add_buteur', { buteur: 'CSC' })}
+                        disabled={updating}
+                      >
+                        ⚽ CSC (contre son camp)
+                      </button>
                       {joueurs.length === 0 ? (
                         <p style={{ color: 'var(--texte-gris)', fontSize: 14 }}>
                           Aucun joueur dans la liste. Ajoutez des joueurs dans l'onglet Listes.
@@ -758,20 +766,27 @@ export default function ScoreLive() {
                 <>
                   <div className="form-group">
                     <label className="form-label">Buteur</label>
-                    {joueurs.length === 0 ? (
-                      <p style={{ color: '#888', fontSize: 14 }}>Aucun joueur disponible — ajoutez des joueurs dans Listes.</p>
-                    ) : (
-                      <select className="form-control form-select"
-                        value={selectedJoueur?.id ?? ''}
-                        onChange={e => setSelectedJoueur(joueurs.find(j => j.id === Number(e.target.value)) || null)}>
-                        {joueurs.map(j => (
-                          <option key={j.id} value={j.id}>
-                            {j.prenom} {j.nom}{j.video_celebration_url ? ' 🎬' : ''}
-                          </option>
-                        ))}
-                      </select>
+                    <select className="form-control form-select"
+                      value={selectedJoueur?.id ?? ''}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === 'csc') {
+                          setSelectedJoueur({ id: 'csc', prenom: '', nom: 'CSC', video_celebration_url: null });
+                        } else {
+                          setSelectedJoueur(joueurs.find(j => j.id === Number(val)) || null);
+                        }
+                      }}>
+                      <option value="csc">CSC (contre son camp)</option>
+                      {joueurs.map(j => (
+                        <option key={j.id} value={j.id}>
+                          {j.prenom} {j.nom}{j.video_celebration_url ? ' 🎬' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {joueurs.length === 0 && (
+                      <p style={{ color: '#888', fontSize: 14, marginTop: 6 }}>Aucun joueur dans la liste — seul le CSC est disponible.</p>
                     )}
-                    {selectedJoueur && !selectedJoueur.video_celebration_url && (
+                    {selectedJoueur && selectedJoueur.id !== 'csc' && !selectedJoueur.video_celebration_url && (
                       <p style={{ fontSize: 12, color: '#e67e22', marginTop: 6 }}>
                         Ce joueur n'a pas de vidéo de célébration — les étapes de publication vidéo seront simulées sans contenu.
                       </p>
@@ -833,7 +848,7 @@ export default function ScoreLive() {
               {!goalSteps ? (
                 <>
                   <button className="btn btn-ghost" onClick={closeGoalModal}>Annuler</button>
-                  <button className="btn btn-primary" onClick={handleGoalSCR} disabled={!selectedJoueur || joueurs.length === 0}>
+                  <button className="btn btn-primary" onClick={handleGoalSCR} disabled={!selectedJoueur}>
                     ⚽ Confirmer le but
                   </button>
                 </>

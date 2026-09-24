@@ -1,12 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import { importFFF } from '../services/api';
 import './TopNav.css';
 
 const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
 
-// Mapping tab id → path
 const TAB_PATH = {
   home:        '/',
   programme:   '/programme',
@@ -19,7 +17,6 @@ const TAB_PATH = {
   listes:      '/listes',
 };
 
-// Mapping path → groupe actif
 function activeGroupFromPath(pathname) {
   const map = {
     '/programme':   'generations',
@@ -35,31 +32,24 @@ function activeGroupFromPath(pathname) {
   return map[pathname] ?? null;
 }
 
-const ROLE_LABELS = {
-  admin:        'Admin',
-  gestionnaire: 'Gestionnaire',
-  coach:        'Coach',
-  score_live:   'Score Live',
-};
-
 const NAV_GROUPS = [
   { id: 'home', label: 'Accueil' },
   {
     id: 'generations', label: 'Générations',
     children: [
-      { id: 'programme',    label: 'Programme',  icon: '📅', roles: ['admin','gestionnaire'] },
-      { id: 'matchday',     label: 'Match Day',  icon: '🏟️', roles: ['admin','gestionnaire'] },
-      { id: 'convocation',  label: 'Convocation',icon: '📨', roles: ['admin','gestionnaire','coach'] },
-      { id: 'resultats',    label: 'Résultats',  icon: '🏆', roles: ['admin','gestionnaire'] },
+      { id: 'programme',    label: 'Programme',   icon: '📅' },
+      { id: 'matchday',     label: 'Match Day',   icon: '🏟️' },
+      { id: 'convocation',  label: 'Convocation', icon: '📨' },
+      { id: 'resultats',    label: 'Résultats',   icon: '🏆' },
     ],
   },
-  { id: 'score_live',  label: 'Score Live',   roles: ['admin','gestionnaire','score_live'] },
+  { id: 'score_live',  label: 'Score Live' },
   { id: 'classements', label: 'Classements' },
   {
     id: 'gestion', label: 'Gestion',
     children: [
-      { id: 'templates', label: 'Templates', icon: '🎨', roles: ['admin','gestionnaire'] },
-      { id: 'listes',    label: 'Liste',     icon: '📋', roles: ['admin','gestionnaire'] },
+      { id: 'templates', label: 'Templates', icon: '🎨' },
+      { id: 'listes',    label: 'Liste',     icon: '📋' },
     ],
   },
 ];
@@ -67,7 +57,6 @@ const NAV_GROUPS = [
 export default function TopNav() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { user, logout, hasRole } = useAuth();
 
   const [openMenu,    setOpenMenu]    = useState(null);
   const [importing,   setImporting]   = useState(false);
@@ -103,11 +92,6 @@ export default function TopNav() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
-  };
-
   return (
     <>
       <header className="topnav" ref={navRef}>
@@ -134,9 +118,6 @@ export default function TopNav() {
           {/* Nav groups */}
           <nav className="topnav-links">
             {NAV_GROUPS.map((group) => {
-              // Masquer les items inaccessibles au rôle courant
-              if (group.roles && !hasRole(group.roles)) return null;
-
               const isActive    = curGroup === group.id;
               const hasChildren = !!group.children;
               const isOpen      = openMenu === group.id;
@@ -153,9 +134,6 @@ export default function TopNav() {
                 );
               }
 
-              const visibleChildren = group.children.filter(c => !c.roles || hasRole(c.roles));
-              if (visibleChildren.length === 0) return null;
-
               return (
                 <div key={group.id} className="topnav-dropdown-wrap">
                   <button
@@ -169,7 +147,7 @@ export default function TopNav() {
                   </button>
                   {isOpen && (
                     <div className="topnav-dropdown">
-                      {visibleChildren.map(child => (
+                      {group.children.map(child => (
                         <button
                           key={child.id}
                           className={`topnav-dropdown-item${location.pathname === TAB_PATH[child.id] ? ' topnav-dropdown-item--active' : ''}`}
@@ -185,15 +163,13 @@ export default function TopNav() {
               );
             })}
 
-            {/* Lien Admin (admin uniquement) */}
-            {hasRole(['admin']) && (
-              <button
-                className={`topnav-item${curGroup === 'admin' ? ' topnav-item--active' : ''}`}
-                onClick={() => { navigate('/admin/users'); setOpenMenu(null); }}
-              >
-                Admin
-              </button>
-            )}
+            {/* Lien Admin */}
+            <button
+              className={`topnav-item${curGroup === 'admin' ? ' topnav-item--active' : ''}`}
+              onClick={() => { navigate('/admin/users'); setOpenMenu(null); }}
+            >
+              Admin
+            </button>
           </nav>
 
           {/* Actions */}
@@ -206,34 +182,19 @@ export default function TopNav() {
             >
               Site vitrine ↗
             </a>
-            {hasRole(['admin', 'gestionnaire']) && (
-              <button
-                className="topnav-btn topnav-btn--ghost"
-                onClick={handleImport}
-                disabled={importing}
-              >
-                {importing ? '⏳' : '⬇'} Import FFF
-              </button>
-            )}
+            <button
+              className="topnav-btn topnav-btn--ghost"
+              onClick={handleImport}
+              disabled={importing}
+            >
+              {importing ? '⏳' : '⬇'} Import FFF
+            </button>
             <button
               className="topnav-btn topnav-btn--gold"
               onClick={() => navigate('/resultats')}
             >
               Publier
             </button>
-
-            {/* User info + logout */}
-            {user && (
-              <div className="topnav-user">
-                <div className="topnav-user-info">
-                  <span className="topnav-user-name">{user.username}</span>
-                  <span className="topnav-user-role">{ROLE_LABELS[user.role] || user.role}</span>
-                </div>
-                <button className="topnav-btn topnav-btn--logout" onClick={handleLogout} title="Déconnexion">
-                  ⏏
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </header>

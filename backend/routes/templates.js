@@ -616,6 +616,12 @@ router.post('/generate-resultat-weekend', async (req, res) => {
         .map(([name, count]) => count > 1 ? `${name} [${count}]` : name)
         .join('\n');
 
+      // TAB (tirs au but) : tab_domicile/tab_exterieur suivent déjà l'ordre
+      // gauche/droite du visuel (nomGauche = équipe domicile, quel que soit scrOnLeft)
+      const tab = (m.tab_domicile != null && m.tab_exterieur != null)
+        ? `(${m.tab_domicile}-${m.tab_exterieur} tab)`
+        : null;
+
       return {
         logoGauche: scrOnLeft ? scrLogo     : advLogoPath,
         nomGauche:  scrOnLeft ? scrNom      : advNom,
@@ -623,6 +629,9 @@ router.post('/generate-resultat-weekend', async (req, res) => {
         nomDroite:  scrOnLeft ? advNom      : scrNom,
         logoDroite: scrOnLeft ? advLogoPath : scrLogo,
         scorers,
+        tab,
+        tab_domicile:  m.tab_domicile  ?? null,
+        tab_exterieur: m.tab_exterieur ?? null,
         domicile:   scrOnLeft,
       };
     }));

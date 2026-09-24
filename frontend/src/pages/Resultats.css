@@ -82,6 +82,13 @@
   padding: 4px 12px;
 }
 
+.competition-badge--amical {
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 14px;
+  padding: 4px 12px;
+}
+
 /* ── Badge résultat V/N/D ────────────────────────────────────────────────────── */
 
 .result-badge {
@@ -97,6 +104,16 @@
 .result-badge--win  { background: var(--vert-success-light); color: var(--vert-success); }
 .result-badge--loss { background: var(--rouge-light);        color: var(--rouge); }
 .result-badge--draw { background: #f3f4f6;                  color: var(--texte-gris); }
+
+/* ── Badge tirs au but ───────────────────────────────────────────────────────── */
+
+.tab-badge {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
 
 /* ── Sous-onglets Phase SCR 3 ────────────────────────────────────────────────── */
 

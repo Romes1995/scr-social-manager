@@ -3,12 +3,8 @@ const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const db      = require('../db');
-const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const ROLES = ['admin', 'gestionnaire', 'coach', 'score_live'];
-
-// Toutes les routes nécessitent auth + rôle admin
-router.use(authenticateToken, requireRole(['admin']));
 
 // GET /api/users
 router.get('/', async (req, res) => {
@@ -56,9 +52,6 @@ router.put('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
   const { role } = req.body;
 
-  if (id === req.user.id) {
-    return res.status(403).json({ error: 'Vous ne pouvez pas modifier votre propre rôle' });
-  }
   if (!role || !ROLES.includes(role)) {
     return res.status(400).json({ error: `Rôle invalide. Valeurs : ${ROLES.join(', ')}` });
   }
@@ -79,10 +72,6 @@ router.put('/:id', async (req, res) => {
 // DELETE /api/users/:id
 router.delete('/:id', async (req, res) => {
   const id = parseInt(req.params.id);
-
-  if (id === req.user.id) {
-    return res.status(403).json({ error: 'Vous ne pouvez pas supprimer votre propre compte' });
-  }
 
   try {
     const { rowCount } = await db.query('DELETE FROM users WHERE id = $1', [id]);

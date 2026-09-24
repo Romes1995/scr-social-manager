@@ -3,6 +3,32 @@ const router = express.Router();
 const pool = require('../db');
 const { ensureAdversaireClub } = require('../utils/ensureClub');
 
+// Même heuristique que le frontend (Resultats.jsx) : pas de champ "type" dédié,
+// la compétition est déduite du libellé de la division.
+const isCoupeDivision = (division) => {
+  const d = division || '';
+  return !/district/i.test(d) && !/amical/i.test(d);
+};
+
+// Ne renvoie {tab_domicile, tab_exterieur} que si le match est en Coupe ET
+// que les scores sont à égalité (TAB) ; sinon force les deux à null.
+function resolveTab({ division, score_scr, score_adv, tab_domicile, tab_exterieur }) {
+  const scrScore = parseInt(score_scr, 10);
+  const advScore = parseInt(score_adv, 10);
+  const eligible = isCoupeDivision(division)
+    && Number.isInteger(scrScore) && Number.isInteger(advScore)
+    && scrScore === advScore;
+
+  if (!eligible) return { tab_domicile: null, tab_exterieur: null };
+
+  const td = parseInt(tab_domicile, 10);
+  const te = parseInt(tab_exterieur, 10);
+  return {
+    tab_domicile:  Number.isInteger(td) ? td : null,
+    tab_exterieur: Number.isInteger(te) ? te : null,
+  };
+}
+
 // GET /api/matches - Liste tous les matchs
 router.get('/', async (req, res) => {
   try {
@@ -42,8 +68,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// standingsHandler est exporté séparément pour être enregistré en route publique
-// (sans authenticateToken) dans index.js — la homepage l'appelle sans token
 async function standingsHandler(req, res) {
   try {
     const result = await pool.query(`
@@ -98,7 +122,7 @@ async function topScorersHandler(req, res) {
         FROM matches
         WHERE statut = 'termine' AND cardinality(buteurs) > 0
       ) sub
-      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> ''
+      WHERE sub.buteur IS NOT NULL AND TRIM(sub.buteur) <> '' AND LOWER(TRIM(sub.buteur)) <> 'csc'
       GROUP BY sub.buteur, sub.equipe
       ORDER BY buts DESC, sub.buteur ASC
       LIMIT $1
@@ -129,7 +153,9 @@ router.post('/', async (req, res) => {
   try {
     const {
       equipe, adversaire, logo_adversaire, date, heure,
-      lieu, domicile, division, statut
+      lieu, domicile, division, statut,
+      score_scr, score_adv, buteurs,
+      tab_domicile, tab_exterieur,
     } = req.body;
 
     if (!equipe || !adversaire) {
@@ -147,12 +173,21 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const finalScoreScr = Number.isInteger(parseInt(score_scr, 10)) ? parseInt(score_scr, 10) : 0;
+    const finalScoreAdv = Number.isInteger(parseInt(score_adv, 10)) ? parseInt(score_adv, 10) : 0;
+    const finalButeurs  = Array.isArray(buteurs) ? buteurs : [];
+    const tab = resolveTab({
+      division, score_scr: finalScoreScr, score_adv: finalScoreAdv, tab_domicile, tab_exterieur,
+    });
+
     const result = await pool.query(
-      `INSERT INTO matches (equipe, adversaire, logo_adversaire, date, heure, lieu, domicile, division, statut)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `INSERT INTO matches (equipe, adversaire, logo_adversaire, date, heure, lieu, domicile, division, statut,
+                             score_scr, score_adv, buteurs, tab_domicile, tab_exterieur)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
        RETURNING *`,
       [equipe, adversaire, logo_adversaire || null, date || null, heure || null,
-       lieu || null, domicile !== false, division || null, statut || 'programme']
+       lieu || null, domicile !== false, division || null, statut || 'programme',
+       finalScoreScr, finalScoreAdv, finalButeurs, tab.tab_domicile, tab.tab_exterieur]
     );
 
     const match = result.rows[0];
@@ -182,22 +217,45 @@ router.put('/:id', async (req, res) => {
   try {
     const {
       equipe, adversaire, logo_adversaire, date, heure,
-      lieu, domicile, division, statut
+      lieu, domicile, division, statut,
+      score_scr, score_adv, buteurs,
+      tab_domicile, tab_exterieur,
     } = req.body;
+
+    const existingRes = await pool.query('SELECT * FROM matches WHERE id=$1', [req.params.id]);
+    if (existingRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Match non trouvé' });
+    }
+    const existing = existingRes.rows[0];
+
+    // Champs non fournis dans le payload → on conserve la valeur déjà en base
+    // (ex: formulaire Programme.jsx, qui n'envoie ni score ni buteurs).
+    const finalDivision = division !== undefined ? (division || null) : existing.division;
+    const finalScoreScr = score_scr !== undefined
+      ? (Number.isInteger(parseInt(score_scr, 10)) ? parseInt(score_scr, 10) : 0)
+      : existing.score_scr;
+    const finalScoreAdv = score_adv !== undefined
+      ? (Number.isInteger(parseInt(score_adv, 10)) ? parseInt(score_adv, 10) : 0)
+      : existing.score_adv;
+    const finalButeurs = Array.isArray(buteurs) ? buteurs : existing.buteurs;
+
+    const tab = resolveTab({
+      division: finalDivision, score_scr: finalScoreScr, score_adv: finalScoreAdv,
+      tab_domicile, tab_exterieur,
+    });
 
     const result = await pool.query(
       `UPDATE matches
        SET equipe=$1, adversaire=$2, logo_adversaire=$3, date=$4, heure=$5,
-           lieu=$6, domicile=$7, division=$8, statut=$9, updated_at=NOW()
-       WHERE id=$10
+           lieu=$6, domicile=$7, division=$8, statut=$9,
+           score_scr=$10, score_adv=$11, buteurs=$12,
+           tab_domicile=$13, tab_exterieur=$14, updated_at=NOW()
+       WHERE id=$15
        RETURNING *`,
       [equipe, adversaire, logo_adversaire || null, date || null, heure || null,
-       lieu || null, domicile !== false, division || null, statut || 'programme', req.params.id]
+       lieu || null, domicile !== false, finalDivision, statut || 'programme',
+       finalScoreScr, finalScoreAdv, finalButeurs, tab.tab_domicile, tab.tab_exterieur, req.params.id]
     );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Match non trouvé' });
-    }
 
     // Auto-créer le club adversaire en arrière-plan (non-bloquant)
     ensureAdversaireClub(result.rows[0].adversaire);
