@@ -54,10 +54,49 @@ CREATE TABLE IF NOT EXISTS matches (
   forfait_adv BOOLEAN NOT NULL DEFAULT false,
   reporte BOOLEAN NOT NULL DEFAULT false,
   fff_updated_at TIMESTAMPTZ,                   -- external_updated_at DOFA
+  -- Poule DOFA (migrations/002_classements.sql)
+  fff_cp_no INTEGER,                            -- competition.cp_no
+  fff_phase_no INTEGER,                         -- phase.number
+  fff_poule_no INTEGER,                         -- poule.stage_number
+  poule_nom VARCHAR(50),                        -- poule.name
   CONSTRAINT statut_check CHECK (statut IN ('programme', 'en_cours', 'termine')),
   CONSTRAINT matches_unique_equipe_date_adversaire UNIQUE (equipe, date, adversaire),
   CONSTRAINT matches_fff_match_id_key UNIQUE (fff_match_id),
   CONSTRAINT matches_score_source_check CHECK (score_source IN ('app', 'fff'))
+);
+
+-- Classements de championnat FFF (migrations/002_classements.sql)
+-- Remplacés en bloc par équipe par services/fffClassement.js (refreshClassements)
+CREATE TABLE IF NOT EXISTS classements (
+  id SERIAL PRIMARY KEY,
+  equipe VARCHAR(10) NOT NULL,                  -- 'SCR 1'
+  saison INTEGER NOT NULL,                      -- 2026 = saison 2026-2027
+  division VARCHAR(100),
+  fff_cp_no INTEGER NOT NULL,
+  fff_phase_no INTEGER NOT NULL,
+  fff_poule_no INTEGER NOT NULL,                -- poule.stage_number
+  poule_nom VARCHAR(50),
+  rang INTEGER NOT NULL,
+  club VARCHAR(100) NOT NULL,
+  club_cl_no INTEGER NOT NULL,
+  club_equipe_no INTEGER NOT NULL DEFAULT 1,    -- equipe.code (1, 2, 3…)
+  logo_url TEXT,
+  points INTEGER NOT NULL,
+  joues INTEGER NOT NULL,
+  victoires INTEGER NOT NULL,
+  nuls INTEGER NOT NULL,
+  defaites INTEGER NOT NULL,
+  forfaits INTEGER NOT NULL DEFAULT 0,
+  penalites INTEGER NOT NULL DEFAULT 0,
+  buts_pour INTEGER NOT NULL,
+  buts_contre INTEGER NOT NULL,
+  diff INTEGER NOT NULL,                        -- buts_pour - buts_contre (signé)
+  is_scr BOOLEAN NOT NULL DEFAULT false,
+  journee INTEGER,                              -- valeur la plus fréquente de « joués »
+  fff_journee_no INTEGER,                       -- cj_no brut DOFA
+  classement_date DATE,                         -- date du classement côté FFF
+  recupere_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT classements_unique_club UNIQUE (equipe, saison, club_cl_no, club_equipe_no)
 );
 
 CREATE TABLE IF NOT EXISTS templates (
@@ -116,6 +155,7 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_matches_date    ON matches(date);
 CREATE INDEX IF NOT EXISTS idx_matches_statut  ON matches(statut);
 CREATE INDEX IF NOT EXISTS idx_matches_equipe  ON matches(equipe);
+CREATE INDEX IF NOT EXISTS idx_classements_equipe ON classements(equipe, saison, rang);
 CREATE INDEX IF NOT EXISTS idx_publications_match ON publications_programmees(match_id);
 -- Migration non appliquée (voir publications_historique ci-dessus)
 CREATE INDEX IF NOT EXISTS idx_historique_match    ON publications_historique(match_id);

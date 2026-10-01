@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { importFFF } = require('../services/fffImport');
+const { refreshClassements } = require('../services/fffClassement');
 
 // Traduit une erreur d'appel DOFA en réponse HTTP explicite
 function sendDofaError(res, err, contexte) {
@@ -75,19 +76,13 @@ router.post('/save', async (req, res) => {
   }
 });
 
-// GET /api/fff/refresh-classement — vide le cache FFF et force un nouveau scraping
-router.get('/refresh-classement', async (req, res) => {
+// POST /api/fff/refresh-classement — récupère les classements DOFA et les remplace en base
+// (une équipe en échec garde son ancien classement)
+router.post('/refresh-classement', async (req, res) => {
   try {
-    const { getClassementFFF, clearCache } = require('../services/fffClassementScraper');
-    clearCache();
-    const data = await getClassementFFF({ forceRefresh: true });
-    const summary = {};
-    for (const [team, val] of Object.entries(data)) {
-      summary[team] = val
-        ? { rows: val.rows.length, scrRow: val.rows.find(r => r.isSCR) ?? null, source: 'fff_scraper' }
-        : { rows: 0, source: 'failed' };
-    }
-    res.json({ success: true, summary });
+    const result = await refreshClassements();
+    const ok = Object.values(result.equipes).every(e => e.ok);
+    res.status(ok ? 200 : 207).json({ success: ok, ...result });
   } catch (err) {
     console.error('[refresh-classement]', err.message);
     res.status(500).json({ error: err.message });

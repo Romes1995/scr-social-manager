@@ -138,6 +138,10 @@ function parseMatch(raw) {
     division:         raw.competition?.name || null,
     competition_type: raw.competition?.type || null,
     journee:          raw.poule_journee?.number ?? null,
+    fff_cp_no:        raw.competition?.cp_no ?? null,
+    fff_phase_no:     raw.phase?.number ?? null,
+    fff_poule_no:     raw.poule?.stage_number ?? null,
+    poule_nom:        raw.poule?.name || null,
 
     lieu:             terrain ? [terrain.name, terrain.city].filter(Boolean).join(', ') || null : null,
     terrain_nom:      terrain?.name     || null,
@@ -225,8 +229,10 @@ async function insertMatch(client, m) {
         score_scr, score_adv, tab_domicile, tab_exterieur, score_source, score_fff_at, fff_resultat,
         fff_match_id, journee, competition_type,
         terrain_nom, terrain_adresse, terrain_cp, terrain_ville,
-        forfait_scr, forfait_adv, reporte, fff_updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27)
+        forfait_scr, forfait_adv, reporte, fff_updated_at,
+        fff_cp_no, fff_phase_no, fff_poule_no, poule_nom)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,
+             $28,$29,$30,$31)
      RETURNING id`,
     [
       m.equipe, m.adversaire, m.logo_adversaire, m.date, m.heure, m.lieu, m.domicile, m.division,
@@ -239,6 +245,7 @@ async function insertMatch(client, m) {
       m.fff_match_id, m.journee, m.competition_type,
       m.terrain_nom, m.terrain_adresse, m.terrain_cp, m.terrain_ville,
       m.forfait_scr, m.forfait_adv, m.reporte, m.fff_updated_at,
+      m.fff_cp_no, m.fff_phase_no, m.fff_poule_no, m.poule_nom,
     ]
   );
   return rows[0].id;
@@ -264,6 +271,10 @@ async function updateMatch(client, row, m) {
   setCoalesce('logo_adversaire',  m.logo_adversaire);
   setCoalesce('journee',          m.journee);
   setCoalesce('competition_type', m.competition_type);
+  setCoalesce('fff_cp_no',        m.fff_cp_no);
+  setCoalesce('fff_phase_no',     m.fff_phase_no);
+  setCoalesce('fff_poule_no',     m.fff_poule_no);
+  setCoalesce('poule_nom',        m.poule_nom);
 
   // Terrain : uniquement si la FFF en fournit un (terrain peut être null)
   if (m.terrain_nom || m.terrain_ville) {
@@ -379,4 +390,7 @@ async function importFFF({ dryRun = false } = {}) {
   return report;
 }
 
-module.exports = { importFFF, fetchAllMatchesDOFA, parseMatch, normalizeName };
+module.exports = {
+  importFFF, fetchAllMatchesDOFA, parseMatch, normalizeName, toTitleCase,
+  getWithRetry, sleep, DOFA_BASE, DOFA_HEADERS, SCR_CL_NO,
+};
