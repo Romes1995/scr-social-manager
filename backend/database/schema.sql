@@ -99,6 +99,21 @@ CREATE TABLE IF NOT EXISTS classements (
   CONSTRAINT classements_unique_club UNIQUE (equipe, saison, club_cl_no, club_equipe_no)
 );
 
+-- Journal des tâches FFF (migrations/003_taches_log.sql) — purgé au-delà de 90 jours
+-- par services/scheduler.js
+CREATE TABLE IF NOT EXISTS taches_log (
+  id SERIAL PRIMARY KEY,
+  tache VARCHAR(30) NOT NULL,                   -- synchro_fff | import_fff | classements
+  declencheur VARCHAR(12) NOT NULL,             -- planifie | rattrapage | manuel
+  debut TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  fin TIMESTAMPTZ,                              -- NULL tant que la tâche tourne
+  succes BOOLEAN,
+  resume JSONB,
+  erreur TEXT,
+  CONSTRAINT taches_log_tache_check       CHECK (tache IN ('synchro_fff', 'import_fff', 'classements')),
+  CONSTRAINT taches_log_declencheur_check CHECK (declencheur IN ('planifie', 'rattrapage', 'manuel'))
+);
+
 CREATE TABLE IF NOT EXISTS templates (
   id SERIAL PRIMARY KEY,
   nom VARCHAR(100) NOT NULL,
@@ -156,6 +171,8 @@ CREATE INDEX IF NOT EXISTS idx_matches_date    ON matches(date);
 CREATE INDEX IF NOT EXISTS idx_matches_statut  ON matches(statut);
 CREATE INDEX IF NOT EXISTS idx_matches_equipe  ON matches(equipe);
 CREATE INDEX IF NOT EXISTS idx_classements_equipe ON classements(equipe, saison, rang);
+CREATE INDEX IF NOT EXISTS idx_taches_log_debut ON taches_log(debut DESC);
+CREATE INDEX IF NOT EXISTS idx_taches_log_tache ON taches_log(tache, debut DESC);
 CREATE INDEX IF NOT EXISTS idx_publications_match ON publications_programmees(match_id);
 -- Migration non appliquée (voir publications_historique ci-dessus)
 CREATE INDEX IF NOT EXISTS idx_historique_match    ON publications_historique(match_id);

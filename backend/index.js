@@ -44,6 +44,7 @@ app.use('/api/templates',  require('./routes/templates'));
 app.use('/api/publish',    require('./routes/publish'));
 app.use('/api/convocation',require('./routes/convocation'));
 app.use('/api/users',      require('./routes/users'));
+app.use('/api/admin',      require('./routes/admin'));
 
 // ── Handlers génériques ───────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -57,4 +58,6 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
   console.log(`🚀 SCR Social Manager API démarré sur http://localhost:${PORT}`);
+  // Tâches planifiées FFF (import + classements) — un seul processus (PM2 : fork, 1 instance)
+  require('./services/scheduler').start();
 });

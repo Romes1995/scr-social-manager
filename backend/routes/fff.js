@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const { importFFF } = require('../services/fffImport');
-const { refreshClassements } = require('../services/fffClassement');
+const { lancerImport, lancerClassements, TacheEnCoursError } = require('../services/scheduler');
+
+// 409 si une tâche FFF (planifiée ou manuelle) tourne déjà
+function sendTacheEnCours(res, err) {
+  return res.status(409).json({ error: err.message });
+}
 
 // Traduit une erreur d'appel DOFA en réponse HTTP explicite
 function sendDofaError(res, err, contexte) {
@@ -58,9 +63,10 @@ router.get('/import', async (req, res) => {
 
 // POST /api/fff/save — import réel depuis DOFA (le corps de la requête est ignoré :
 // les données sont toujours relues à la source)
+// Journalisé dans taches_log (tâche import_fff, déclencheur manuel)
 router.post('/save', async (req, res) => {
   try {
-    const report = await importFFF();
+    const report = await lancerImport('manuel');
     res.json({
       success: true,
       saved:   report.created.length,
@@ -72,18 +78,20 @@ router.post('/save', async (req, res) => {
       skipped:      report.skipped,
     });
   } catch (err) {
+    if (err instanceof TacheEnCoursError) return sendTacheEnCours(res, err);
     sendDofaError(res, err, 'FFF Save');
   }
 });
 
 // POST /api/fff/refresh-classement — récupère les classements DOFA et les remplace en base
-// (une équipe en échec garde son ancien classement)
+// (une équipe en échec garde son ancien classement). Journalisé dans taches_log.
 router.post('/refresh-classement', async (req, res) => {
   try {
-    const result = await refreshClassements();
+    const result = await lancerClassements('manuel');
     const ok = Object.values(result.equipes).every(e => e.ok);
     res.status(ok ? 200 : 207).json({ success: ok, ...result });
   } catch (err) {
+    if (err instanceof TacheEnCoursError) return sendTacheEnCours(res, err);
     console.error('[refresh-classement]', err.message);
     res.status(500).json({ error: err.message });
   }
