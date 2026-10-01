@@ -2,6 +2,20 @@ const express = require('express');
 const router  = express.Router();
 const pool    = require('../db');
 const { lireClassements } = require('../services/fffClassement');
+const { getAccueil } = require('../services/accueilPublic');
+
+// GET /api/public/accueil — tout ce qu'affiche la page d'accueil, en une requête.
+// Lecture seule en base (cache mémoire, vidé après chaque tâche FFF).
+router.get('/accueil', async (req, res) => {
+  try {
+    const data = await getAccueil();
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json(data);
+  } catch (err) {
+    console.error('[accueil]', err);
+    res.status(500).json({ error: 'Service momentanément indisponible' });
+  }
+});
 
 // GET /api/public/score-live — matchs en cours avec logos
 router.get('/score-live', async (req, res) => {
@@ -75,54 +89,6 @@ router.get('/buteurs', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('BUTEURS ERROR:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/public/classement — classement calculé depuis les matchs enregistrés
-router.get('/classement', async (req, res) => {
-  try {
-    const result = await pool.query(`
-      SELECT
-        adversaire                                                           AS equipe,
-        COUNT(*)::int                                                        AS joues,
-        SUM(CASE WHEN score_adv > score_scr THEN 1 ELSE 0 END)::int        AS victoires,
-        SUM(CASE WHEN score_adv = score_scr THEN 1 ELSE 0 END)::int        AS nuls,
-        SUM(CASE WHEN score_adv < score_scr THEN 1 ELSE 0 END)::int        AS defaites,
-        SUM(score_adv)::int                                                  AS buts_pour,
-        SUM(score_scr)::int                                                  AS buts_contre,
-        (SUM(score_adv) - SUM(score_scr))::int                             AS diff,
-        SUM(CASE WHEN score_adv > score_scr THEN 3
-                 WHEN score_adv = score_scr THEN 1 ELSE 0 END)::int        AS points,
-        false                                                                AS "isSCR"
-      FROM matches
-      WHERE statut = 'termine'
-        AND division ILIKE '%district%'
-      GROUP BY adversaire
-
-      UNION ALL
-
-      SELECT
-        equipe                                                               AS equipe,
-        COUNT(*)::int                                                        AS joues,
-        SUM(CASE WHEN score_scr > score_adv THEN 1 ELSE 0 END)::int        AS victoires,
-        SUM(CASE WHEN score_scr = score_adv THEN 1 ELSE 0 END)::int        AS nuls,
-        SUM(CASE WHEN score_scr < score_adv THEN 1 ELSE 0 END)::int        AS defaites,
-        SUM(score_scr)::int                                                  AS buts_pour,
-        SUM(score_adv)::int                                                  AS buts_contre,
-        (SUM(score_scr) - SUM(score_adv))::int                             AS diff,
-        SUM(CASE WHEN score_scr > score_adv THEN 3
-                 WHEN score_scr = score_adv THEN 1 ELSE 0 END)::int        AS points,
-        true                                                                 AS "isSCR"
-      FROM matches
-      WHERE statut = 'termine'
-        AND division ILIKE '%district%'
-      GROUP BY equipe
-
-      ORDER BY points DESC, diff DESC, buts_pour DESC
-    `);
-    res.json(result.rows);
-  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

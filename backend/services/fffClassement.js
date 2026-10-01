@@ -12,6 +12,7 @@
  */
 
 const pool = require('../db');
+const club = require('../config/club');
 const {
   getWithRetry, sleep, toTitleCase, DOFA_BASE, DOFA_HEADERS, SCR_CL_NO,
 } = require('./fffImport');
@@ -225,10 +226,20 @@ async function lireClassements({ equipe = null } = {}) {
   const saison = saisonCourante();
 
   const { rows } = await pool.query(
-    `SELECT * FROM classements
-      WHERE saison = $1 AND ($2::text IS NULL OR equipe = $2)
-      ORDER BY equipe, rang`,
-    [saison, equipe]
+    // Logo affiché : logo du club SCR (config/club.js) pour SCR ; sinon logo local
+    // (clubs, même règle de nom que les matchs) ; à défaut, logo FFF stocké.
+    `SELECT cl.*,
+            CASE WHEN cl.is_scr THEN $3
+                 ELSE COALESCE(
+                   (SELECT c.logo_url FROM clubs c
+                     WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(cl.club))
+                     LIMIT 1),
+                   cl.logo_url)
+            END AS logo_affiche
+       FROM classements cl
+      WHERE cl.saison = $1 AND ($2::text IS NULL OR cl.equipe = $2)
+      ORDER BY cl.equipe, cl.rang`,
+    [saison, equipe, club.logo]
   );
 
   const result = {};
@@ -253,7 +264,8 @@ async function lireClassements({ equipe = null } = {}) {
     result[r.equipe].rows.push({
       rank:        r.rang,
       equipe:      r.club,
-      logo:        r.logo_url,
+      club_equipe_no: r.club_equipe_no,
+      logo:        r.logo_affiche,
       points:      r.points,
       joues:       r.joues,
       victoires:   r.victoires,

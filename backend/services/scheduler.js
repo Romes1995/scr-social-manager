@@ -18,6 +18,7 @@ const cron = require('node-cron');
 const pool = require('../db');
 const { importFFF } = require('./fffImport');
 const { refreshClassements } = require('./fffClassement');
+const { invaliderCache: invaliderCacheAccueil } = require('./accueilPublic');
 
 const TZ                   = 'Europe/Paris';
 const DECALAGE_MAX_MS      = 10 * 60 * 1000;
@@ -106,6 +107,8 @@ async function executerTache(tache, declencheur, fn, contexte = {}) {
     throw err;
   } finally {
     enCours = null;
+    // Données FFF potentiellement modifiées : la page d'accueil publique est recalculée
+    invaliderCacheAccueil();
   }
 }
 
