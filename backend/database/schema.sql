@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS joueurs (
   categorie VARCHAR(30),
   photo VARCHAR(255),
   video_celebration_url TEXT,
+  celebration_url TEXT,
   created_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -38,7 +39,25 @@ CREATE TABLE IF NOT EXISTS matches (
   statut VARCHAR(20) DEFAULT 'programme',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
-  CONSTRAINT statut_check CHECK (statut IN ('programme', 'en_cours', 'termine'))
+  -- Rattachement FFF / DOFA (migrations/001_etape1_fff.sql)
+  fff_match_id INTEGER,                         -- ma_no DOFA
+  journee INTEGER,                              -- poule_journee.number
+  competition_type VARCHAR(5),                  -- CH (championnat) / CP (coupe)
+  score_source VARCHAR(10),                     -- 'app' | 'fff' | NULL (pas de score)
+  score_fff_at TIMESTAMPTZ,                     -- publication / confirmation du score par la FFF
+  terrain_nom VARCHAR(150),
+  terrain_adresse VARCHAR(200),
+  terrain_cp VARCHAR(10),
+  terrain_ville VARCHAR(100),
+  fff_resultat VARCHAR(2),                      -- GA / PE / NU, vu côté SCR
+  forfait_scr BOOLEAN NOT NULL DEFAULT false,
+  forfait_adv BOOLEAN NOT NULL DEFAULT false,
+  reporte BOOLEAN NOT NULL DEFAULT false,
+  fff_updated_at TIMESTAMPTZ,                   -- external_updated_at DOFA
+  CONSTRAINT statut_check CHECK (statut IN ('programme', 'en_cours', 'termine')),
+  CONSTRAINT matches_unique_equipe_date_adversaire UNIQUE (equipe, date, adversaire),
+  CONSTRAINT matches_fff_match_id_key UNIQUE (fff_match_id),
+  CONSTRAINT matches_score_source_check CHECK (score_source IN ('app', 'fff'))
 );
 
 CREATE TABLE IF NOT EXISTS templates (
@@ -62,6 +81,24 @@ CREATE TABLE IF NOT EXISTS publications_programmees (
   CONSTRAINT pub_statut_check CHECK (statut IN ('en_attente', 'publie', 'erreur'))
 );
 
+-- Journal des publications Meta réellement envoyées (mock, test ou live),
+-- distinct de publications_programmees qui gère la planification.
+-- ⚠️ Migration non appliquée : cette table (et ses index ci-dessous) n'existe pas
+-- encore dans la base (database/migration_publications_historique.sql).
+CREATE TABLE IF NOT EXISTS publications_historique (
+  id SERIAL PRIMARY KEY,
+  match_id INTEGER REFERENCES matches(id) ON DELETE SET NULL,
+  platform VARCHAR(20) NOT NULL,
+  type VARCHAR(30) NOT NULL,
+  meta_post_id TEXT,
+  statut VARCHAR(20) NOT NULL,
+  erreur TEXT,
+  image_url TEXT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT hist_platform_check CHECK (platform IN ('facebook', 'instagram')),
+  CONSTRAINT hist_statut_check   CHECK (statut IN ('publie', 'erreur', 'mock', 'test'))
+);
+
 CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live');
 
 CREATE TABLE IF NOT EXISTS users (
@@ -80,3 +117,21 @@ CREATE INDEX IF NOT EXISTS idx_matches_date    ON matches(date);
 CREATE INDEX IF NOT EXISTS idx_matches_statut  ON matches(statut);
 CREATE INDEX IF NOT EXISTS idx_matches_equipe  ON matches(equipe);
 CREATE INDEX IF NOT EXISTS idx_publications_match ON publications_programmees(match_id);
+-- Migration non appliquée (voir publications_historique ci-dessus)
+CREATE INDEX IF NOT EXISTS idx_historique_match    ON publications_historique(match_id);
+CREATE INDEX IF NOT EXISTS idx_historique_created   ON publications_historique(created_at DESC);
+
+-- Logos temporaires (Octobre Rose, Movember…) — club_id NULL = SCR
+CREATE TABLE IF NOT EXISTS logos_temporaires (
+  id            SERIAL PRIMARY KEY,
+  club_id       INTEGER REFERENCES clubs(id) ON DELETE CASCADE,
+  nom_evenement VARCHAR(100) NOT NULL,
+  fichier       VARCHAR(255) NOT NULL,
+  date_debut    DATE NOT NULL,
+  date_fin      DATE NOT NULL,
+  actif         BOOLEAN DEFAULT true,
+  created_at    TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT logos_temp_dates_check CHECK (date_fin >= date_debut)
+);
+CREATE INDEX IF NOT EXISTS idx_logos_temp_club  ON logos_temporaires(club_id);
+CREATE INDEX IF NOT EXISTS idx_logos_temp_dates ON logos_temporaires(date_debut, date_fin);

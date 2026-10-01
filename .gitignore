@@ -35,3 +35,6 @@ coverage/
 
 # Application mobile (projet séparé)
 mobile/
+
+# Sauvegardes base de données
+backups/
