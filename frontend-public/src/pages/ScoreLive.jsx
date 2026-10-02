@@ -94,21 +94,20 @@ export default function ScoreLive() {
   const [lastUpdate, setLastUpdate]   = useState(null);
   const [loading, setLoading]         = useState(true);
 
-  const refresh = useCallback(async () => {
-    try {
-      const [liveRes, matchsRes] = await Promise.all([getScoreLive(), getPublicMatchs()]);
-      setLiveMatches(liveRes.data);
-      if (liveRes.data.length === 0) {
-        const upcoming = matchsRes.data.upcoming || [];
-        setNextMatch(upcoming[0] || null);
-      }
-      setLastUpdate(new Date());
-    } catch (err) {
-      console.error('[ScoreLive]', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // Les mises à jour d'état ont lieu à la réponse de l'API (jamais pendant l'effet)
+  const refresh = useCallback(() => (
+    Promise.all([getScoreLive(), getPublicMatchs()])
+      .then(([liveRes, matchsRes]) => {
+        setLiveMatches(liveRes.data);
+        if (liveRes.data.length === 0) {
+          const upcoming = matchsRes.data.upcoming || [];
+          setNextMatch(upcoming[0] || null);
+        }
+        setLastUpdate(new Date());
+      })
+      .catch(err => console.error('[ScoreLive]', err))
+      .finally(() => setLoading(false))
+  ), []);
 
   useEffect(() => {
     refresh();

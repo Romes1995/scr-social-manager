@@ -1,9 +1,10 @@
 /**
  * Données de la page d'accueil publique (GET /api/public/accueil)
  *
- * Une seule réponse : prochains matchs, résumé du week-end, derniers résultats
- * officiels FFF, classements et identité du club. Lecture seule en base, aucun
- * appel à la FFF. Toutes les dates sont calculées en heure de Paris.
+ * Une seule réponse : prochains matchs (week-end ou jour du prochain match) et
+ * leur résumé, derniers résultats officiels FFF, classements et identité du club.
+ * Lecture seule en base, aucun appel à la FFF. Toutes les dates sont calculées
+ * en heure de Paris.
  *
  * Cache mémoire : vidé par invaliderCache() à la fin de chaque tâche FFF
  * (services/scheduler.js), avec une durée de vie maximale de 10 minutes.
@@ -31,6 +32,17 @@ function ajouterJours(iso, n) {
 }
 
 const jourSemaine = (iso) => new Date(`${iso}T12:00:00Z`).getUTCDay();   // 0 = dimanche
+
+// Fenêtre d'affichage des prochains matchs autour d'un jour de match :
+// vendredi, samedi ou dimanche → du vendredi au dimanche de ce week-end ; sinon ce seul jour
+function fenetreAutour(jour) {
+  const j = jourSemaine(jour);
+  if (j === 5 || j === 6 || j === 0) {
+    const vendredi = ajouterJours(jour, -((j + 2) % 7));
+    return { debut: vendredi, fin: ajouterJours(vendredi, 2), weekEnd: true };
+  }
+  return { debut: jour, fin: jour, weekEnd: false };
+}
 
 // Samedi et dimanche à venir ; un dimanche, seul le jour même compte (samedi = null)
 function weekEnd(aujourdhui) {
@@ -67,15 +79,19 @@ const heureCourte = (h) => (h ? String(h).slice(0, 5) : null);
 // Les logos temporaires (Octobre Rose…) sont volontairement ignorés.
 // Nom adversaire : nom d'affichage du club (clubsFff.nomClub), appliqué par nommerAdversaire().
 
+// Premier jour à venir ayant un match programmé, toutes équipes confondues
+const SQL_PREMIER_JOUR = `
+  SELECT MIN(date)::text AS jour FROM matches WHERE statut = 'programme' AND date >= $1::date`;
+
+// Matchs programmés de la fenêtre (jours passés exclus), reportés compris
 const SQL_PROCHAINS = `
-  SELECT DISTINCT ON (m.equipe)
-         m.equipe, m.division, m.competition_type, m.journee, m.date, m.heure, m.domicile,
+  SELECT m.equipe, m.division, m.competition_type, m.journee, m.date, m.heure, m.domicile,
          m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
          m.terrain_nom, m.terrain_adresse, m.terrain_cp, m.terrain_ville, m.reporte
     FROM matches m
     ${SQL_JOIN_CLUB_ADVERSAIRE}
-   WHERE m.statut = 'programme' AND m.date >= $1::date
-   ORDER BY m.equipe, m.date, m.heure NULLS LAST`;
+   WHERE m.statut = 'programme' AND m.date BETWEEN GREATEST($1::date, $2::date) AND $3::date
+   ORDER BY m.date, m.heure NULLS LAST, m.equipe`;
 
 // Dernier score officiel FFF (amicaux et scores non publiés exclus d'office)
 const SQL_RESULTATS = `
@@ -88,13 +104,22 @@ const SQL_RESULTATS = `
    WHERE m.score_source = 'fff' AND m.date <= $1::date
    ORDER BY m.equipe, m.date DESC, m.heure DESC NULLS LAST`;
 
-const SQL_WEEK_END = `
-  SELECT COUNT(*)::int                           AS matchs,
-         COUNT(*) FILTER (WHERE domicile)::int   AS domicile
-    FROM matches
-   WHERE statut = 'programme' AND date = ANY($1::date[])`;
 
 // ── Construction ──────────────────────────────────────────────────────────────
+
+// Noms complets et courts des deux équipes, dans l'ordre domicile / extérieur.
+// SCR : config/club.js (« SC Roeschwoog 2 ») ; adversaire : nom d'affichage (nommerAdversaire).
+function equipesDuMatch(r) {
+  const scr = nomEquipeScr(r.equipe);
+  const [dom, ext]           = r.domicile ? [scr, r.adversaire] : [r.adversaire, scr];
+  const [domCourt, extCourt] = r.domicile ? [scr, r.adversaire_court] : [r.adversaire_court, scr];
+  return {
+    equipe_domicile:        dom,
+    equipe_exterieur:       ext,
+    equipe_domicile_court:  domCourt,
+    equipe_exterieur_court: extCourt,
+  };
+}
 
 function formaterProchain(ligne) {
   const r = nommerAdversaire(ligne, { court: true });
@@ -111,6 +136,7 @@ function formaterProchain(ligne) {
     adversaire:        r.adversaire,
     adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
+    ...equipesDuMatch(r),
     terrain,
     lien_itineraire:   lienItineraire(terrain),
     reporte:           r.reporte,
@@ -119,7 +145,6 @@ function formaterProchain(ligne) {
 
 function formaterResultat(ligne) {
   const r = nommerAdversaire(ligne, { court: true });
-  const scr = nomEquipeScr(r.equipe);
   const aTab = r.tab_domicile != null && r.tab_exterieur != null;
   const tabScr = aTab ? (r.domicile ? r.tab_domicile : r.tab_exterieur) : null;
   const tabAdv = aTab ? (r.domicile ? r.tab_exterieur : r.tab_domicile) : null;
@@ -141,8 +166,7 @@ function formaterResultat(ligne) {
     adversaire:        r.adversaire,
     adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
-    equipe_domicile:   r.domicile ? scr : r.adversaire,
-    equipe_exterieur:  r.domicile ? r.adversaire : scr,
+    ...equipesDuMatch(r),
     score_domicile:    r.domicile ? r.score_scr : r.score_adv,
     score_exterieur:   r.domicile ? r.score_adv : r.score_scr,
     tab_domicile:      aTab ? r.tab_domicile : null,
@@ -188,23 +212,35 @@ function formaterClassements(classements) {
  * `aujourdhui` ('YYYY-MM-DD') est injectable pour les tests ; par défaut, la date de Paris.
  */
 async function construireAccueil({ aujourdhui = dateParis() } = {}) {
-  const we = weekEnd(aujourdhui);
-  const joursWeekEnd = [we.samedi, we.dimanche].filter(Boolean);
-
-  const [prochains, resultats, weekEndRes, classements] = await Promise.all([
-    pool.query(SQL_PROCHAINS, [aujourdhui]),
+  const [premier, resultats, classements] = await Promise.all([
+    pool.query(SQL_PREMIER_JOUR, [aujourdhui]),
     pool.query(SQL_RESULTATS, [aujourdhui]),
-    pool.query(SQL_WEEK_END, [joursWeekEnd]),
     lireClassements(),
   ]);
 
+  // Fenêtre : week-end (vendredi-dimanche) ou jour isolé du prochain match
+  const jour = premier.rows[0].jour;
+  const f = jour ? fenetreAutour(jour) : null;
+  const prochains = f ? (await pool.query(SQL_PROCHAINS, [aujourdhui, f.debut, f.fin])).rows : [];
+
+  // « Ce week-end » : le week-end en cours ou le prochain samedi-dimanche
+  const we = weekEnd(aujourdhui);
+  const domicile = prochains.filter(m => m.domicile).length;
+  const fenetre = {
+    debut:           f?.debut ?? null,
+    fin:             f?.fin ?? null,
+    est_ce_week_end: Boolean(f?.weekEnd && f.fin === we.dimanche),
+    matchs:          prochains.length,
+    domicile,
+    exterieur:       prochains.length - domicile,
+  };
+
   const saison = saisonCourante(new Date(`${aujourdhui}T12:00:00Z`));
-  const { matchs, domicile } = weekEndRes.rows[0];
 
   return {
     club: { nom: club.nom, logo: club.logo, saison: `${saison}-${saison + 1}` },
-    prochains:   prochains.rows.map(formaterProchain),
-    ce_week_end: { samedi: we.samedi, dimanche: we.dimanche, matchs, domicile, exterieur: matchs - domicile },
+    prochains:   prochains.map(formaterProchain),
+    fenetre,
     resultats:   resultats.rows.map(formaterResultat),
     classements: formaterClassements(classements),
     genere_at:   new Date().toISOString(),

@@ -1,0 +1,561 @@
+/* ─── Accueil de la vitrine ─────────────────────────────────────────────────
+   Mobile d'abord (référence 390 px). Au-delà, les fonds de section prennent
+   toute la largeur et le contenu reste dans une colonne de 560 px.
+   Tout est préfixé .acc- : theme.css (global) reste valable pour les autres pages. */
+
+.acc {
+  --acc-vert:        #004225;   /* vert anglais */
+  --acc-vert-moyen:  #17583A;
+  --acc-vert-palette:#0B5234;
+  --acc-dore:        #D4B062;
+  --acc-blanc:       #FFFFFF;
+  --acc-clair:       #EDF1EC;
+  --acc-texte:       #12301F;
+  --acc-texte-2:     #4A5E52;
+  --acc-texte-3:     #6B7D71;
+  --acc-pointilles:  #BFD0C3;
+
+  --acc-f-chiffres: 'Big Shoulders Display', 'Arial Narrow', 'Roboto Condensed', sans-serif;
+  --acc-f-texte:    'Archivo', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --acc-f-gothique: 'UnifrakturMaguntia', 'Old English Text MT', 'Times New Roman', serif;
+
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--acc-blanc);
+  color: var(--acc-texte);
+  font-family: var(--acc-f-texte);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.acc p { margin: 0; }
+.acc h1, .acc h2, .acc h3 { margin: 0; }
+
+/* Visuels (<picture>) : taille donnée par width / height de la version retenue */
+.acc-visuel { display: block; line-height: 0; }
+.acc-visuel img { display: block; max-width: 100%; height: auto; }
+
+.acc-col {
+  max-width: 592px;            /* 560 px de contenu + 2 × 16 px */
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.acc-sr {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ─── Fonds ─────────────────────────────────────────────────────────────── */
+
+.acc-vert  { background: var(--acc-vert); color: var(--acc-blanc); }
+.acc-blanc { background: var(--acc-blanc); }
+.acc-clair { background: var(--acc-clair); }
+
+/* Grain : bruit SVG blanc, non interactif, sous le contenu */
+.acc-grain { position: relative; isolation: isolate; }
+.acc-grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.14;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+.acc-section { padding: 32px 0 36px; }
+
+/* ─── En-tête ───────────────────────────────────────────────────────────── */
+
+.acc-entete { padding: 14px 0 6px; }
+.acc-entete-contenu { display: flex; align-items: center; gap: 12px; }
+.acc-entete-nom { line-height: 0; }
+
+/* ─── Titres ────────────────────────────────────────────────────────────── */
+
+.acc-titre-images { line-height: 0; }
+
+.acc-sous-titre { margin-top: 14px; font-size: 16px; color: #CFE2D5; }
+/* Date de la fenêtre hors « ce week-end » : « Le week-end du 17 et 18 octobre » */
+.acc-sous-titre-quand { display: block; margin-bottom: 2px; font-weight: 700; font-size: 17px; color: var(--acc-blanc); }
+
+.acc-vide {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--acc-clair);
+  color: var(--acc-texte-2);
+  font-size: 15px;
+}
+.acc-clair .acc-vide { background: var(--acc-blanc); }
+.acc-vide-clair { background: rgba(255, 255, 255, 0.08); color: #CFE2D5; }
+
+/* ─── Prochains matchs ──────────────────────────────────────────────────── */
+
+.acc-prochains { padding-top: 26px; overflow: hidden; }
+
+.acc-terrain { position: relative; max-width: 592px; margin: 22px auto 0; }
+
+/* Rond central : en partie caché derrière les billets */
+.acc-rond-central {
+  position: absolute;
+  left: 50%;
+  top: -150px;
+  width: 240px;
+  height: 240px;
+  margin-left: -120px;
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.acc-billets {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding: 0 16px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 16px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.acc-billets::-webkit-scrollbar { display: none; }
+.acc-billets:focus-visible { outline: 2px solid var(--acc-dore); outline-offset: 4px; }
+
+.acc-billet {
+  position: relative;
+  flex: 0 0 322px;
+  min-width: 0;                /* largeur fixe, même avec un nom long */
+  height: 236px;
+  display: flex;
+  background: var(--acc-blanc);
+  color: var(--acc-texte);
+  border-radius: 10px;
+  scroll-snap-align: start;
+}
+
+.acc-billet-corps {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 16px 16px 18px;
+}
+.acc-billet-compet { font-size: 13px; font-weight: 600; color: var(--acc-vert-moyen); line-height: 1.3; }
+.acc-billet-date { font-size: 14px; color: var(--acc-texte-2); margin-top: 2px; }
+.acc-billet-affiche { margin-top: 8px; display: flex; flex-direction: column; min-width: 0; }
+.acc-billet-nom {
+  display: block;
+  font-family: var(--acc-f-chiffres);
+  font-weight: 800;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--acc-texte);
+}
+.acc-billet-recoit {
+  font-family: var(--acc-f-gothique);
+  font-size: 18px;
+  line-height: 1.15;
+  color: var(--acc-vert-moyen);
+}
+
+.acc-billet-lieu {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--acc-vert);
+  font-size: 14px;
+  font-weight: 600;
+}
+.acc-picto { flex: 0 0 20px; color: var(--acc-vert); }
+.acc-billet-lieu a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--acc-vert);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+/* Talon séparé par des pointillés, avec deux encoches */
+.acc-billet-talon {
+  position: relative;
+  flex: 0 0 82px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-left: 2px dashed var(--acc-pointilles);
+  color: var(--acc-vert);
+}
+.acc-billet-talon::before,
+.acc-billet-talon::after {
+  content: '';
+  position: absolute;
+  left: -10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--acc-vert);
+  z-index: 1;
+}
+.acc-billet-talon::before { top: -9px; }
+.acc-billet-talon::after  { bottom: -9px; }
+
+.acc-billet-bandeau {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 8px;
+  border-top-right-radius: 10px;
+}
+.acc-billet-heure { display: flex; flex-direction: column; align-items: center; font-family: var(--acc-f-chiffres); }
+.acc-billet-h { font-weight: 900; font-size: 44px; line-height: 0.9; }
+.acc-billet-m { font-weight: 800; font-size: 22px; line-height: 1.1; }
+.acc-billet-journee {
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--acc-texte-3);
+}
+.acc-billet-reporte {
+  padding: 4px 6px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  font-family: var(--acc-f-chiffres);
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1;
+  text-transform: uppercase;
+  text-align: center;
+  transform: rotate(-8deg);
+}
+
+.acc-ligne-mediane { display: none; }
+
+/* ─── Derniers résultats ────────────────────────────────────────────────── */
+
+.acc-panneau {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 8px 16px;
+  border-radius: 12px;
+}
+.acc-resultat { padding: 14px 0; }
+.acc-resultat + .acc-resultat { border-top: 1px solid rgba(255, 255, 255, 0.12); }
+
+.acc-resultat-haut { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.acc-resultat-equipe { font-size: 13px; color: #A9C4B2; }
+.acc-resultat-compet { font-size: 14px; color: #D4E2D8; }
+.acc-issue { flex: 0 0 auto; margin-top: 2px; }
+
+.acc-resultat-score {
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 10px;
+}
+.acc-resultat-nom {
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--acc-blanc);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.acc-resultat-nom.acc-scr { font-weight: 700; }
+
+.acc-palette {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 46px;
+  border-radius: 5px;
+  background: var(--acc-vert-palette);
+  perspective: 220px;
+  overflow: hidden;
+}
+/* Fente horizontale du tableau à palettes */
+.acc-palette::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  height: 2px;
+  margin-top: -1px;
+  background: var(--acc-vert);
+}
+.acc-palette-chiffre {
+  font-family: var(--acc-f-chiffres);
+  font-weight: 900;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--acc-dore);
+  transform: rotateX(-92deg);
+  backface-visibility: hidden;
+  transition: transform 0.55s cubic-bezier(.3, 1.4, .5, 1);
+  transition-delay: var(--acc-delai, 0s);
+}
+.acc-palette-chiffre.acc-palette-visible { transform: rotateX(0); }
+
+.acc-resultat-tab { margin-top: 8px; font-size: 13px; color: var(--acc-dore); }
+
+/* ─── Classements ───────────────────────────────────────────────────────── */
+
+.acc-onglets {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 18px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--acc-blanc);
+}
+.acc-onglet {
+  min-height: 44px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--acc-texte);
+  font: 600 15px var(--acc-f-texte);
+  cursor: pointer;
+}
+.acc-onglet-actif { background: var(--acc-vert); color: var(--acc-blanc); font-weight: 700; }
+.acc-onglet:focus-visible,
+.acc-bouton-texte:focus-visible,
+.acc-bouton-reseau:focus-visible,
+.acc-billet-lieu a:focus-visible { outline: 2px solid var(--acc-dore); outline-offset: 2px; }
+
+.acc-cl-info { margin: 14px 0 10px; font-size: 14px; color: var(--acc-texte-2); }
+
+.acc-cl-entete,
+.acc-cl-ligne {
+  display: grid;
+  grid-template-columns: 34px 1fr 30px 40px 40px;
+  align-items: center;
+  column-gap: 6px;
+  padding: 0 12px;
+}
+.acc-cl-entete { font-size: 12px; color: var(--acc-texte-3); padding-bottom: 4px; }
+.acc-cl-ligne {
+  height: 46px;
+  margin-top: 4px;
+  border-radius: 8px;
+  background: var(--acc-blanc);
+  font-size: 15px;
+}
+.acc-cl-num { text-align: center; }
+.acc-cl-rang {
+  font-family: var(--acc-f-chiffres);
+  font-weight: 800;
+  font-size: 22px;
+  color: var(--acc-texte-3);
+}
+.acc-cl-club { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-cl-pts {
+  text-align: center;
+  font-family: var(--acc-f-chiffres);
+  font-weight: 800;
+  font-size: 20px;
+}
+.acc-cl-scr {
+  height: 52px;
+  background: var(--acc-vert);
+  color: var(--acc-blanc);
+  font-weight: 700;
+}
+.acc-cl-scr .acc-cl-rang { color: var(--acc-dore); font-size: 26px; }
+
+.acc-bouton-texte {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  border: 1.5px solid var(--acc-vert);
+  border-radius: 10px;
+  background: var(--acc-blanc);
+  color: var(--acc-vert);
+  font: 600 15px var(--acc-f-texte);
+  cursor: pointer;
+}
+.acc-cl-maj { margin-top: 12px; font-size: 12px; color: var(--acc-texte-3); text-align: center; }
+
+/* ─── Pied de page ──────────────────────────────────────────────────────── */
+
+.acc-pied { padding: 40px 0 48px; }
+.acc-pied-slogan img { margin: 0 auto; }
+.acc-pied-club { display: flex; align-items: center; gap: 16px; margin-top: 30px; }
+.acc-pied-club .acc-visuel { flex: 0 1 auto; max-width: 42%; }
+.acc-pied-adresse { font-style: normal; font-size: 15px; line-height: 1.5; color: #DCE7DF; }
+.acc-pied-reseaux { display: flex; gap: 12px; margin-top: 28px; }
+.acc-bouton-reseau {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 2px solid var(--acc-dore);
+  border-radius: 22px;
+  color: var(--acc-blanc);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ─── Erreur et chargement ──────────────────────────────────────────────── */
+
+/* La page courte (erreur) remplit l'écran : pas de blanc sous le pied de page */
+.acc > main { flex: 1; display: flex; flex-direction: column; }
+.acc-erreur { flex: 1; padding: 48px 0 56px; }
+.acc-erreur p { font-size: 17px; color: #CFE2D5; text-align: center; }
+
+.acc-sq { display: block; border-radius: 8px; background: rgba(255, 255, 255, 0.1); animation: acc-pulse 1.4s ease-in-out infinite; }
+.acc-sq-sombre { background: rgba(0, 66, 37, 0.08); }
+.acc-sq-titre { width: 240px; height: 44px; }
+.acc-sq-ligne { width: 80%; height: 16px; margin-top: 16px; }
+.acc-billets-squelette { margin: 22px auto 0; max-width: 592px; overflow: hidden; }
+.acc-sq-billet { flex: 0 0 322px; height: 236px; border-radius: 10px; }
+.acc-sq-panneau { height: 240px; margin-top: 18px; border-radius: 12px; animation-delay: 0.2s; background: rgba(0, 66, 37, 0.08); }
+
+@keyframes acc-pulse { 50% { opacity: 0.55; } }
+
+/* ─── Mouvement réduit : palettes affichées directement, sans pulsation ─── */
+
+@media (prefers-reduced-motion: reduce) {
+  .acc-palette-chiffre { transform: none; transition: none; }
+  .acc-sq { animation: none; }
+  .acc-billets { scroll-behavior: auto; }
+}
+
+/* ─── Ordinateur (≥ 1024 px) ─────────────────────────────────────────────────
+   Colonne de 1120 px ; en dessous, la version mobile reste inchangée (560 px). */
+
+@media (min-width: 1024px) {
+  .acc-col { max-width: 1152px; }        /* 1120 px de contenu + 2 × 16 px */
+  .acc-section { padding: 48px 0 56px; }
+
+  /* En-tête */
+  .acc-entete { padding: 16px 0 10px; }
+  .acc-entete-contenu { gap: 14px; }
+
+  /* Prochains matchs : titre à gauche, phrase à droite, terrain en fond côté droit */
+  .acc-prochains { padding: 44px 0 60px; }
+  .acc-prochains-tete {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 32px;
+  }
+  .acc-prochains-tete .acc-sous-titre { margin: 0 0 14px; max-width: 440px; font-size: 18px; text-align: right; }
+  .acc-sous-titre-quand { font-size: 20px; }
+  .acc-prochains-tete .acc-vide { margin: 0 0 10px; }
+
+  .acc-terrain { position: static; max-width: 1152px; margin-top: 36px; }
+  .acc-rond-central {
+    top: 34px;
+    left: calc(50% + 300px);
+    width: 420px;
+    height: 420px;
+    margin-left: -210px;
+  }
+  .acc-ligne-mediane {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% + 300px);
+    width: 2px;
+    margin-left: -1px;
+    background: rgba(255, 255, 255, 0.16);
+    pointer-events: none;
+  }
+
+  .acc-billets {
+    z-index: 1;
+    max-width: 1152px;
+    margin: 0 auto;
+    /* Centrés ; à trois, 50 px d'écart les répartissent sur les 1120 px */
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 40px 50px;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  .acc-billet { flex: 0 0 340px; height: 244px; }
+  .acc-billet-talon { flex-basis: 86px; }
+  .acc-billet-h { font-size: 46px; }
+
+  /* Derniers résultats : un panneau en trois colonnes */
+  .acc-panneau {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    margin-top: 24px;
+    padding: 0;
+    border-radius: 14px;
+  }
+  /* Lignes alignées d'une colonne à l'autre (compétition sur deux lignes, tirs au but) */
+  .acc-panneau { grid-template-rows: auto auto auto; }
+  .acc-resultat {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    align-content: start;
+    padding: 24px 26px 26px;
+    min-width: 0;
+  }
+  .acc-resultat + .acc-resultat { border-top: 0; border-left: 1px solid rgba(255, 255, 255, 0.14); }
+  .acc-resultat-score { grid-template-columns: 1fr 44px; margin-top: 16px; }
+  .acc-resultat-nom { font-size: 18px; }
+  .acc-palette { width: 44px; height: 52px; }
+  .acc-palette-chiffre { font-size: 38px; }
+
+  /* Classements : les trois côte à côte */
+  .acc-cl-tete { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+  .acc-cl-tete .acc-cl-maj { margin: 0 0 8px; font-size: 13px; }
+  .acc-cl-colonnes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 40px;
+    margin-top: 28px;
+  }
+  .acc-cl-equipe {
+    font-family: var(--acc-f-chiffres);
+    font-weight: 900;
+    font-size: 30px;
+    line-height: 1;
+    color: var(--acc-vert);
+  }
+  .acc-cl-colonnes .acc-cl-info { margin: 6px 0 10px; }
+  .acc-cl-colonnes .acc-cl-ligne { height: 38px; font-size: 14px; }
+  .acc-cl-colonnes .acc-cl-rang { font-size: 20px; }
+  .acc-cl-colonnes .acc-cl-pts { font-size: 18px; }
+  .acc-cl-colonnes .acc-cl-scr { height: 44px; }
+  .acc-cl-colonnes .acc-cl-scr .acc-cl-rang { font-size: 24px; }
+
+  /* Pied de page sur une ligne */
+  .acc-pied { padding: 48px 0; }
+  .acc-pied-grille {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 32px;
+  }
+  .acc-pied-slogan { justify-self: start; }
+  .acc-pied-slogan img { margin: 0; }
+  .acc-pied-club { margin-top: 0; gap: 20px; }
+  .acc-pied-club .acc-visuel { max-width: none; }
+  .acc-pied-reseaux { justify-self: end; flex-direction: column; width: 220px; margin-top: 0; }
+}

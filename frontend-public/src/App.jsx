@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import './theme.css';
 import Navbar     from './components/Navbar';
-import Accueil    from './pages/Accueil';
+import Accueil    from './accueil/Accueil';
 import Vitrine    from './pages/Vitrine';
 import ScoreLive  from './pages/ScoreLive';
 import Matchs     from './pages/Matchs';
@@ -10,7 +10,8 @@ import Classement from './pages/Classement';
 
 function AppRoutes() {
   const { pathname } = useLocation();
-  const showNavbar   = !pathname.startsWith('/vitrine');
+  // L'accueil a son propre en-tête, sans menu ; les autres pages restent accessibles par leur URL
+  const showNavbar   = pathname !== '/' && !pathname.startsWith('/vitrine');
 
   return (
     <>
