@@ -1,12 +1,14 @@
 -- SCR Social Manager - Schema PostgreSQL
+-- L'ordre des colonnes reproduit celui de la base actuelle (colonnes
+-- ajoutées par migration en fin de table) : pg_dump -s des deux bases est identique.
 
 CREATE TABLE IF NOT EXISTS clubs (
   id SERIAL PRIMARY KEY,
   nom VARCHAR(100) NOT NULL,
-  equipe VARCHAR(50),
   logo_url TEXT,
-  logo_monochrome_url TEXT,
   created_at TIMESTAMP DEFAULT NOW(),
+  logo_monochrome_url TEXT,
+  equipe VARCHAR(50),
   -- Identité FFF et noms d'affichage (migrations/004_clubs_noms.sql)
   fff_cl_no INTEGER,                            -- club.cl_no DOFA
   nom_fff VARCHAR(100),                         -- short_name FFF, tenu à jour par l'import
@@ -19,12 +21,12 @@ CREATE TABLE IF NOT EXISTS joueurs (
   id SERIAL PRIMARY KEY,
   nom VARCHAR(50) NOT NULL,
   prenom VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  video_celebration_url TEXT,
   ddn DATE,
   categorie VARCHAR(30),
   photo VARCHAR(255),
-  video_celebration_url TEXT,
-  celebration_url TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  celebration_url TEXT
 );
 
 CREATE TABLE IF NOT EXISTS matches (
@@ -40,11 +42,11 @@ CREATE TABLE IF NOT EXISTS matches (
   score_scr INTEGER DEFAULT 0,
   score_adv INTEGER DEFAULT 0,
   buteurs TEXT[] DEFAULT '{}',
-  tab_domicile INTEGER,
-  tab_exterieur INTEGER,
   statut VARCHAR(20) DEFAULT 'programme',
   created_at TIMESTAMP DEFAULT NOW(),
   updated_at TIMESTAMP DEFAULT NOW(),
+  tab_domicile INTEGER,
+  tab_exterieur INTEGER,
   -- Rattachement FFF / DOFA (migrations/001_etape1_fff.sql)
   fff_match_id INTEGER,                         -- ma_no DOFA
   journee INTEGER,                              -- poule_journee.number
@@ -145,9 +147,8 @@ CREATE TABLE IF NOT EXISTS publications_programmees (
 );
 
 -- Journal des publications Meta réellement envoyées (mock, test ou live),
--- distinct de publications_programmees qui gère la planification.
--- ⚠️ Migration non appliquée : cette table (et ses index ci-dessous) n'existe pas
--- encore dans la base (database/migration_publications_historique.sql).
+-- distinct de publications_programmees qui gère la planification
+-- (database/migration_publications_historique.sql).
 CREATE TABLE IF NOT EXISTS publications_historique (
   id SERIAL PRIMARY KEY,
   match_id INTEGER REFERENCES matches(id) ON DELETE SET NULL,
@@ -184,7 +185,6 @@ CREATE INDEX IF NOT EXISTS idx_classements_equipe ON classements(equipe, saison,
 CREATE INDEX IF NOT EXISTS idx_taches_log_debut ON taches_log(debut DESC);
 CREATE INDEX IF NOT EXISTS idx_taches_log_tache ON taches_log(tache, debut DESC);
 CREATE INDEX IF NOT EXISTS idx_publications_match ON publications_programmees(match_id);
--- Migration non appliquée (voir publications_historique ci-dessus)
 CREATE INDEX IF NOT EXISTS idx_historique_match    ON publications_historique(match_id);
 CREATE INDEX IF NOT EXISTS idx_historique_created   ON publications_historique(created_at DESC);
 
