@@ -3,6 +3,12 @@ const router  = express.Router();
 const pool    = require('../db');
 const { lireClassements } = require('../services/fffClassement');
 const { getAccueil } = require('../services/accueilPublic');
+const {
+  nommerAdversaire, SQL_JOIN_CLUB_ADVERSAIRE, SQL_LOGO_ADVERSAIRE_LOCAL, SQL_NOMS_ADVERSAIRE,
+} = require('../services/clubsFff');
+
+// Les champs `adversaire` passent par le nom d'affichage du club (clubsFff.nomClub) ;
+// logo_adversaire_local est relié par cl_no, puis par nom.
 
 // GET /api/public/accueil — tout ce qu'affiche la page d'accueil, en une requête.
 // Lecture seule en base (cache mémoire, vidé après chaque tâche FFF).
@@ -21,16 +27,14 @@ router.get('/accueil', async (req, res) => {
 router.get('/score-live', async (req, res) => {
   try {
     const result = await pool.query(`
-      SELECT m.*,
-        (SELECT c.logo_url FROM clubs c
-         WHERE c.logo_url IS NOT NULL
-           AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
-         LIMIT 1) AS logo_adversaire_local
+      SELECT m.*, ${SQL_NOMS_ADVERSAIRE},
+        ${SQL_LOGO_ADVERSAIRE_LOCAL} AS logo_adversaire_local
       FROM matches m
+      ${SQL_JOIN_CLUB_ADVERSAIRE}
       WHERE m.statut = 'en_cours'
       ORDER BY m.date DESC, m.heure DESC
     `);
-    res.json(result.rows);
+    res.json(result.rows.map(r => nommerAdversaire(r)));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -41,25 +45,29 @@ router.get('/matchs', async (req, res) => {
   try {
     const [upcomingRes, resultsRes] = await Promise.all([
       pool.query(`
-        SELECT m.id, m.equipe, m.adversaire, m.date, m.heure, m.lieu, m.domicile, m.division,
-          (SELECT c.logo_url FROM clubs c
-           WHERE c.logo_url IS NOT NULL
-             AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
-           LIMIT 1) AS logo_adversaire_local
+        SELECT m.id, m.equipe, m.adversaire, m.adversaire_equipe_no, m.date, m.heure, m.lieu, m.domicile, m.division,
+          ${SQL_NOMS_ADVERSAIRE},
+          ${SQL_LOGO_ADVERSAIRE_LOCAL} AS logo_adversaire_local
         FROM matches m
+        ${SQL_JOIN_CLUB_ADVERSAIRE}
         WHERE m.statut = 'programme' AND m.date >= CURRENT_DATE
         ORDER BY m.date ASC, m.heure ASC
         LIMIT 30
       `),
       pool.query(`
-        SELECT id, equipe, adversaire, date, domicile, division, score_scr, score_adv, buteurs
-        FROM matches
-        WHERE statut = 'termine'
-        ORDER BY date DESC
+        SELECT m.id, m.equipe, m.adversaire, m.adversaire_equipe_no, m.date, m.domicile, m.division,
+          m.score_scr, m.score_adv, m.buteurs, ${SQL_NOMS_ADVERSAIRE}
+        FROM matches m
+        ${SQL_JOIN_CLUB_ADVERSAIRE}
+        WHERE m.statut = 'termine'
+        ORDER BY m.date DESC
         LIMIT 15
       `),
     ]);
-    res.json({ upcoming: upcomingRes.rows, results: resultsRes.rows });
+    res.json({
+      upcoming: upcomingRes.rows.map(r => nommerAdversaire(r)),
+      results:  resultsRes.rows.map(r => nommerAdversaire(r)),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -146,10 +154,10 @@ router.get('/carousel/:teamId', async (req, res) => {
       // Dernier résultat
       pool.query(`
         SELECT m.*,
-          (SELECT c.logo_url FROM clubs c
-           WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
-           LIMIT 1) AS logo_adversaire_local
+          ${SQL_NOMS_ADVERSAIRE},
+          ${SQL_LOGO_ADVERSAIRE_LOCAL} AS logo_adversaire_local
         FROM matches m
+        ${SQL_JOIN_CLUB_ADVERSAIRE}
         WHERE m.equipe = $1 AND m.statut = 'termine'
         ORDER BY m.date DESC, m.heure DESC NULLS LAST
         LIMIT 1
@@ -182,10 +190,10 @@ router.get('/carousel/:teamId', async (req, res) => {
       // Prochain match
       pool.query(`
         SELECT m.*,
-          (SELECT c.logo_url FROM clubs c
-           WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
-           LIMIT 1) AS logo_adversaire_local
+          ${SQL_NOMS_ADVERSAIRE},
+          ${SQL_LOGO_ADVERSAIRE_LOCAL} AS logo_adversaire_local
         FROM matches m
+        ${SQL_JOIN_CLUB_ADVERSAIRE}
         WHERE m.equipe = $1 AND m.statut = 'programme' AND m.date >= CURRENT_DATE
         ORDER BY m.date ASC, m.heure ASC NULLS LAST
         LIMIT 1
@@ -197,10 +205,10 @@ router.get('/carousel/:teamId', async (req, res) => {
 
     res.json({
       equipe,
-      lastResult: lastRes.rows[0]  || null,
+      lastResult: nommerAdversaire(lastRes.rows[0]) || null,
       ranking,
       topScorer:  topRes.rows[0]   || null,
-      nextMatch:  nextRes.rows[0]  || null,
+      nextMatch:  nommerAdversaire(nextRes.rows[0]) || null,
     });
   } catch (err) {
     console.error('[carousel]', err.message);
@@ -249,6 +257,8 @@ router.get('/vitrine/:teamId', async (req, res) => {
       const matchsRes = await pool.query(`
         SELECT
           m.adversaire,
+          m.adversaire_equipe_no,
+          ${SQL_NOMS_ADVERSAIRE},
           m.date,
           m.heure,
           m.division,
@@ -258,6 +268,7 @@ router.get('/vitrine/:teamId', async (req, res) => {
           (SELECT COUNT(*) FROM UNNEST(m.buteurs) AS b
            WHERE LOWER(TRIM(b)) = LOWER(TRIM($2)))::int AS nb_buts
         FROM matches m
+        ${SQL_JOIN_CLUB_ADVERSAIRE}
         WHERE m.equipe = $1
           AND m.statut = 'termine'
           AND EXISTS (
@@ -266,26 +277,26 @@ router.get('/vitrine/:teamId', async (req, res) => {
           )
         ORDER BY m.date DESC
       `, [equipe, topScorer.nom]);
-      scorerMatchs = matchsRes.rows;
+      scorerMatchs = matchsRes.rows.map(r => nommerAdversaire(r));
     }
 
     const [lastRes, nextRes] = await Promise.all([
       pool.query(`
         SELECT m.*,
-          (SELECT c.logo_url FROM clubs c
-           WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
-           LIMIT 1) AS logo_adversaire_local
+          ${SQL_NOMS_ADVERSAIRE},
+          ${SQL_LOGO_ADVERSAIRE_LOCAL} AS logo_adversaire_local
         FROM matches m
+        ${SQL_JOIN_CLUB_ADVERSAIRE}
         WHERE m.equipe = $1 AND m.statut = 'termine'
         ORDER BY m.date DESC, m.heure DESC NULLS LAST
         LIMIT 1
       `, [equipe]),
       pool.query(`
         SELECT m.*,
-          (SELECT c.logo_url FROM clubs c
-           WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
-           LIMIT 1) AS logo_adversaire_local
+          ${SQL_NOMS_ADVERSAIRE},
+          ${SQL_LOGO_ADVERSAIRE_LOCAL} AS logo_adversaire_local
         FROM matches m
+        ${SQL_JOIN_CLUB_ADVERSAIRE}
         WHERE m.equipe = $1 AND m.statut = 'programme' AND m.date >= CURRENT_DATE
         ORDER BY m.date ASC, m.heure ASC NULLS LAST
         LIMIT 1
@@ -297,8 +308,8 @@ router.get('/vitrine/:teamId', async (req, res) => {
     res.json({
       equipe,
       ranking,
-      lastResult:      lastRes.rows[0] || null,
-      nextMatch:       nextRes.rows[0] || null,
+      lastResult:      nommerAdversaire(lastRes.rows[0]) || null,
+      nextMatch:       nommerAdversaire(nextRes.rows[0]) || null,
       meilleurButeur:  topScorer ? { ...topScorer, matchs: scorerMatchs } : null,
     });
   } catch (err) {

@@ -12,6 +12,9 @@
 const pool = require('../db');
 const club = require('../config/club');
 const { lireClassements, saisonCourante } = require('./fffClassement');
+const {
+  nommerAdversaire, SQL_JOIN_CLUB_ADVERSAIRE, SQL_LOGO_ADVERSAIRE, SQL_NOMS_ADVERSAIRE,
+} = require('./clubsFff');
 
 const TZ           = 'Europe/Paris';
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -60,20 +63,17 @@ const heureCourte = (h) => (h ? String(h).slice(0, 5) : null);
 
 // ── Requêtes ──────────────────────────────────────────────────────────────────
 
-// Logo adversaire : logo local (clubs, même nom) sinon logo FFF du match.
+// Logo adversaire : logo local (clubs, par cl_no puis par nom) sinon logo FFF du match.
 // Les logos temporaires (Octobre Rose…) sont volontairement ignorés.
-const SQL_LOGO = `COALESCE(
-  (SELECT c.logo_url FROM clubs c
-    WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(m.adversaire))
-    LIMIT 1),
-  m.logo_adversaire)`;
+// Nom adversaire : nom d'affichage du club (clubsFff.nomClub), appliqué par nommerAdversaire().
 
 const SQL_PROCHAINS = `
   SELECT DISTINCT ON (m.equipe)
          m.equipe, m.division, m.competition_type, m.journee, m.date, m.heure, m.domicile,
-         m.adversaire, ${SQL_LOGO} AS logo,
+         m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
          m.terrain_nom, m.terrain_adresse, m.terrain_cp, m.terrain_ville, m.reporte
     FROM matches m
+    ${SQL_JOIN_CLUB_ADVERSAIRE}
    WHERE m.statut = 'programme' AND m.date >= $1::date
    ORDER BY m.equipe, m.date, m.heure NULLS LAST`;
 
@@ -81,9 +81,10 @@ const SQL_PROCHAINS = `
 const SQL_RESULTATS = `
   SELECT DISTINCT ON (m.equipe)
          m.equipe, m.division, m.competition_type, m.date, m.domicile,
-         m.adversaire, ${SQL_LOGO} AS logo,
+         m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
          m.score_scr, m.score_adv, m.tab_domicile, m.tab_exterieur
     FROM matches m
+    ${SQL_JOIN_CLUB_ADVERSAIRE}
    WHERE m.score_source = 'fff' AND m.date <= $1::date
    ORDER BY m.equipe, m.date DESC, m.heure DESC NULLS LAST`;
 
@@ -95,7 +96,8 @@ const SQL_WEEK_END = `
 
 // ── Construction ──────────────────────────────────────────────────────────────
 
-function formaterProchain(r) {
+function formaterProchain(ligne) {
+  const r = nommerAdversaire(ligne, { court: true });
   const terrain = { nom: r.terrain_nom, adresse: r.terrain_adresse, cp: r.terrain_cp, ville: r.terrain_ville };
   return {
     equipe:            r.equipe,
@@ -107,6 +109,7 @@ function formaterProchain(r) {
     heure:             heureCourte(r.heure),
     domicile:          r.domicile,
     adversaire:        r.adversaire,
+    adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
     terrain,
     lien_itineraire:   lienItineraire(terrain),
@@ -114,7 +117,8 @@ function formaterProchain(r) {
   };
 }
 
-function formaterResultat(r) {
+function formaterResultat(ligne) {
+  const r = nommerAdversaire(ligne, { court: true });
   const scr = nomEquipeScr(r.equipe);
   const aTab = r.tab_domicile != null && r.tab_exterieur != null;
   const tabScr = aTab ? (r.domicile ? r.tab_domicile : r.tab_exterieur) : null;
@@ -135,6 +139,7 @@ function formaterResultat(r) {
     date:              r.date,
     domicile:          r.domicile,
     adversaire:        r.adversaire,
+    adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
     equipe_domicile:   r.domicile ? scr : r.adversaire,
     equipe_exterieur:  r.domicile ? r.adversaire : scr,
@@ -157,9 +162,10 @@ function formaterClassements(classements) {
       mis_a_jour: c.mis_a_jour,
       lignes: c.rows.map(r => ({
         rang:           r.rank,
-        club:           r.equipe,
+        club:           r.club,
         club_equipe_no: r.club_equipe_no,
-        nom_affiche:    r.club_equipe_no > 1 ? `${r.equipe} ${r.club_equipe_no}` : r.equipe,
+        nom_affiche:    r.equipe,         // nom d'affichage (sinon FFF) + numéro d'équipe
+        nom_court:      r.equipe_court,
         logo:           r.logo,
         points:         r.points,
         joues:          r.joues,

@@ -4,6 +4,11 @@ const multer  = require('multer');
 const path    = require('path');
 const fs      = require('fs');
 const pool    = require('../db');
+const { invaliderCache: invaliderCacheAccueil } = require('../services/accueilPublic');
+const { saisonCourante } = require('../services/fffClassement');
+const { nomClub } = require('../services/clubsFff');
+
+const LONGUEUR_MAX = { nom_affiche: 100, nom_court: 40 };
 
 const LOGOS_DIR = path.join(__dirname, '..', 'uploads', 'logos');
 if (!fs.existsSync(LOGOS_DIR)) fs.mkdirSync(LOGOS_DIR, { recursive: true });
@@ -61,10 +66,45 @@ const uploadBulk = multer({
 });
 
 // ─── GET /api/clubs ───────────────────────────────────────────────────────────
+// Sans paramètre : toutes les lignes (panneau « Clubs adversaires » de Listes).
+// ?saison=1 : clubs rattachés à la FFF (fff_cl_no) rencontrés cette saison, avec les
+//   équipes SCR qui les rencontrent ; ceux sans nom d'affichage en premier.
+// ?sans_nom_affiche=1 : (avec saison) uniquement les clubs sans nom d'affichage.
 router.get('/', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM clubs ORDER BY nom ASC');
-    res.json(result.rows);
+    if (req.query.saison !== '1') {
+      const result = await pool.query('SELECT * FROM clubs ORDER BY nom ASC');
+      return res.json(result.rows);
+    }
+
+    const saison = saisonCourante();
+    const [debut, fin] = [`${saison}-07-01`, `${saison + 1}-06-30`];
+    const result = await pool.query(
+      `WITH rencontres AS (
+         SELECT adversaire_cl_no AS cl_no, equipe AS equipe_scr, adversaire_equipe_no AS equipe_no
+           FROM matches
+          WHERE adversaire_cl_no IS NOT NULL AND date BETWEEN $1 AND $2
+         UNION
+         SELECT club_cl_no, equipe, club_equipe_no
+           FROM classements
+          WHERE saison = $3 AND NOT is_scr
+       )
+       SELECT c.id, c.nom, c.fff_cl_no, c.nom_fff, c.nom_affiche, c.nom_court,
+              c.logo_url, c.logo_monochrome_url,
+              (SELECT m.logo_adversaire FROM matches m
+                WHERE m.adversaire_cl_no = c.fff_cl_no AND m.logo_adversaire IS NOT NULL
+                ORDER BY m.date DESC LIMIT 1) AS logo_fff,
+              ARRAY_AGG(DISTINCT r.equipe_scr ORDER BY r.equipe_scr) AS equipes_scr,
+              ARRAY_AGG(DISTINCT r.equipe_no ORDER BY r.equipe_no)
+                FILTER (WHERE r.equipe_no IS NOT NULL)            AS equipes_no
+         FROM clubs c
+         JOIN rencontres r ON r.cl_no = c.fff_cl_no
+        WHERE ($4::boolean IS NOT TRUE OR c.nom_affiche IS NULL)
+        GROUP BY c.id
+        ORDER BY (c.nom_affiche IS NOT NULL), COALESCE(c.nom_fff, c.nom)`,
+      [debut, fin, saison, req.query.sans_nom_affiche === '1']
+    );
+    res.json(result.rows.map(c => ({ ...c, nom_site: nomClub(c, 1) })));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -197,15 +237,43 @@ router.post('/:id/logo', uploadClub.single('logo'), async (req, res) => {
 });
 
 // ─── PUT /api/clubs/:id ───────────────────────────────────────────────────────
+// Mise à jour partielle : seuls les champs présents dans le corps sont modifiés.
+// nom_affiche / nom_court : chaîne vide → NULL (retour au nom FFF).
+// fff_cl_no et nom_fff ne sont pas modifiables (tenus par l'import FFF).
 router.put('/:id', async (req, res) => {
   try {
-    const { nom, logo_url, logo_monochrome_url, equipe } = req.body;
-    if (!nom) return res.status(400).json({ error: 'nom est requis' });
+    const body   = req.body || {};
+    const sets   = [];
+    const params = [];
+    const set = (col, val) => { params.push(val); sets.push(`${col}=$${params.length}`); };
+
+    if ('nom' in body) {
+      if (!body.nom || !String(body.nom).trim()) return res.status(400).json({ error: 'nom est requis' });
+      set('nom', String(body.nom).trim());
+    }
+    for (const col of ['logo_url', 'logo_monochrome_url', 'equipe']) {
+      if (col in body) set(col, body[col] || null);
+    }
+    for (const col of ['nom_affiche', 'nom_court']) {
+      if (!(col in body)) continue;
+      if (body[col] != null && typeof body[col] !== 'string') {
+        return res.status(400).json({ error: `${col} doit être une chaîne` });
+      }
+      const val = (body[col] || '').trim().replace(/\s+/g, ' ') || null;
+      if (val && val.length > LONGUEUR_MAX[col]) {
+        return res.status(400).json({ error: `${col} : ${LONGUEUR_MAX[col]} caractères maximum` });
+      }
+      set(col, val);
+    }
+    if (sets.length === 0) return res.status(400).json({ error: 'Aucun champ à modifier' });
+
+    params.push(req.params.id);
     const result = await pool.query(
-      'UPDATE clubs SET nom=$1, logo_url=$2, logo_monochrome_url=$3, equipe=$4 WHERE id=$5 RETURNING *',
-      [nom.trim(), logo_url || null, logo_monochrome_url || null, equipe || null, req.params.id]
-    );
+      `UPDATE clubs SET ${sets.join(', ')} WHERE id=$${params.length} RETURNING *`, params);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Club non trouvé' });
+
+    // Noms et logos affichés sur le site public : l'accueil est recalculé
+    invaliderCacheAccueil();
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });

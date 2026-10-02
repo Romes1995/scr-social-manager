@@ -122,6 +122,10 @@ const resumeImport = (report) => ({
   scores_fff:     report.scoreChanges.length,
   ambigus:        report.ambiguous.length,
   erreurs:        report.errors.length,
+  clubs:          report.clubs && {
+    crees: report.clubs.crees.length, rattaches: report.clubs.rattaches.length,
+    renommes: report.clubs.renommes.length, ambigus: report.clubs.ambigus.length,
+  },
 });
 
 const resumeClassements = (result) => {

@@ -54,6 +54,10 @@ export const getClubs = () => api.get('/clubs');
 export const createClub = (data) => api.post('/clubs', data);
 export const updateClub = (id, data) => api.put(`/clubs/${id}`, data);
 export const deleteClub = (id) => api.delete(`/clubs/${id}`);
+// Noms d'affichage (page /clubs) : clubs rattachés à la FFF rencontrés cette saison
+export const getClubsSaison = (sansNomAffiche = false) =>
+  api.get('/clubs', { params: { saison: 1, ...(sansNomAffiche ? { sans_nom_affiche: 1 } : {}) } });
+export const updateClubNoms = (id, { nom_affiche, nom_court }) => api.put(`/clubs/${id}`, { nom_affiche, nom_court });
 
 // --- Joueurs ---
 export const getJoueurs = () => api.get('/joueurs');

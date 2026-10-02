@@ -4,7 +4,8 @@
  * refreshClassements() : récupère le classement de chaque équipe SCR engagée en
  *   championnat et le remplace en base, en une transaction par équipe. Si la
  *   récupération ou le contrôle échoue, l'ancien classement reste en place.
- *   Réutilisable par une tâche planifiée.
+ *   Réutilisable par une tâche planifiée. Chaque club du classement est rattaché
+ *   ou créé dans clubs par son cl_no (services/clubsFff.js).
  * lireClassements()    : lecture seule depuis la base (routes publiques).
  *
  * Rien n'est codé en dur : la saison se déduit de la date et la poule de chaque
@@ -14,8 +15,9 @@
 const pool = require('../db');
 const club = require('../config/club');
 const {
-  getWithRetry, sleep, toTitleCase, DOFA_BASE, DOFA_HEADERS, SCR_CL_NO,
+  getWithRetry, sleep, toTitleCase, normalizeName, DOFA_BASE, DOFA_HEADERS, SCR_CL_NO,
 } = require('./fffImport');
+const { assurerClubs, nomClub, sqlLogoParNom } = require('./clubsFff');
 
 // ── Saison ────────────────────────────────────────────────────────────────────
 
@@ -111,6 +113,8 @@ function parseClassement(members, logos) {
     // goals_diff DOFA est une valeur absolue : on recalcule la différence signée
     l.diff     = l.buts_pour - l.buts_contre;
     l.logo_url = l.is_scr ? null : (logos.get(club) || null);
+    l.autres_noms = [x.equipe?.short_name_ligue, x.equipe?.short_name_federation]
+      .filter(Boolean).map(normalizeName);
 
     if (!club) throw new Error(`club sans nom (rang ${x.rank})`);
     for (const k of ENTIERS) {
@@ -185,6 +189,7 @@ async function refreshClassements({ fetcher = fetchClassementDOFA } = {}) {
   const poules = await trouverPoules(saison);
   const logos  = await chargerLogos();
   const equipes = {};
+  const clubsVus = [];
 
   if (poules.length === 0) {
     console.warn(`[Classement] Aucune poule de championnat en base pour la saison ${saison} (lancer l'import FFF)`);
@@ -197,6 +202,8 @@ async function refreshClassements({ fetcher = fetchClassementDOFA } = {}) {
       const lignes  = parseClassement(members, logos);
       const journee = journeeLaPlusFrequente(lignes);
       await remplacerClassement(saison, poule, lignes, journee);
+      clubsVus.push(...lignes.filter(l => !l.is_scr)
+        .map(l => ({ cl_no: l.club_cl_no, nom: l.club, autresNoms: l.autres_noms })));
 
       const scr = lignes.find(l => l.is_scr);
       equipes[poule.equipe] = { ok: true, lignes: lignes.length, journee, rang_scr: scr.rang };
@@ -209,7 +216,14 @@ async function refreshClassements({ fetcher = fetchClassementDOFA } = {}) {
     }
   }
 
-  return { saison, equipes };
+  // Clubs rencontrés : rattachés ou créés après coup (n'affecte pas les classements)
+  const clubs = await assurerClubs(clubsVus);
+  if (clubs.crees.length || clubs.rattaches.length || clubs.renommes.length || clubs.ambigus.length) {
+    console.log(`[Classement] Clubs : ${clubs.crees.length} créé(s), ${clubs.rattaches.length} rattaché(s), ` +
+                `${clubs.renommes.length} renommé(s), ${clubs.ambigus.length} ambigu(s)`);
+  }
+
+  return { saison, equipes, clubs };
 }
 
 // ── Lecture (routes publiques) ────────────────────────────────────────────────
@@ -227,16 +241,14 @@ async function lireClassements({ equipe = null } = {}) {
 
   const { rows } = await pool.query(
     // Logo affiché : logo du club SCR (config/club.js) pour SCR ; sinon logo local
-    // (clubs, même règle de nom que les matchs) ; à défaut, logo FFF stocké.
+    // (clubs, par cl_no puis par nom comme les matchs) ; à défaut, logo FFF stocké.
     `SELECT cl.*,
             CASE WHEN cl.is_scr THEN $3
-                 ELSE COALESCE(
-                   (SELECT c.logo_url FROM clubs c
-                     WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(cl.club))
-                     LIMIT 1),
-                   cl.logo_url)
-            END AS logo_affiche
+                 ELSE COALESCE(ca.logo_url, ${sqlLogoParNom('cl.club')}, cl.logo_url)
+            END AS logo_affiche,
+            ca.nom_affiche AS ca_nom_affiche, ca.nom_court AS ca_nom_court, ca.nom_fff AS ca_nom_fff
        FROM classements cl
+       LEFT JOIN clubs ca ON ca.fff_cl_no = cl.club_cl_no AND NOT cl.is_scr
       WHERE cl.saison = $1 AND ($2::text IS NULL OR cl.equipe = $2)
       ORDER BY cl.equipe, cl.rang`,
     [saison, equipe, club.logo]
@@ -261,9 +273,16 @@ async function lireClassements({ equipe = null } = {}) {
         rows:       [],
       };
     }
+    // equipe : nom d'affichage du club (sinon nom FFF), avec le numéro d'équipe s'il est > 1 ;
+    // ligne SCR : nom de config/club.js (« SC Roeschwoog 2 »), comme dans les résultats
+    const nomsClub = r.is_scr
+      ? { nom: club.nom }
+      : { nom_affiche: r.ca_nom_affiche, nom_court: r.ca_nom_court, nom_fff: r.ca_nom_fff, nom: r.club };
     result[r.equipe].rows.push({
       rank:        r.rang,
-      equipe:      r.club,
+      equipe:      nomClub(nomsClub, r.club_equipe_no),
+      equipe_court: nomClub(nomsClub, r.club_equipe_no, { court: true }),
+      club:        r.club,
       club_equipe_no: r.club_equipe_no,
       logo:        r.logo_affiche,
       points:      r.points,

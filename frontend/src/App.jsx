@@ -6,6 +6,7 @@ import ScoreLive from './pages/ScoreLive';
 import Resultats from './pages/Resultats';
 import Templates from './pages/Templates';
 import Listes from './pages/Listes';
+import ClubsNoms from './pages/ClubsNoms';
 import MatchDay from './pages/MatchDay';
 import ConvocationPreparator from './pages/ConvocationPreparator';
 import Classements from './pages/Classements';
@@ -33,6 +34,7 @@ export default function App() {
           <Route path="/resultats"   element={<ProtectedRoute><Resultats /></ProtectedRoute>} />
           <Route path="/templates"   element={<ProtectedRoute><Templates /></ProtectedRoute>} />
           <Route path="/listes"      element={<ProtectedRoute><Listes /></ProtectedRoute>} />
+          <Route path="/clubs"       element={<ProtectedRoute><ClubsNoms /></ProtectedRoute>} />
           <Route path="/matchday"    element={<ProtectedRoute><MatchDay /></ProtectedRoute>} />
           <Route path="/convocation" element={<ProtectedRoute><ConvocationPreparator /></ProtectedRoute>} />
           <Route path="/classements" element={<ProtectedRoute><Classements /></ProtectedRoute>} />

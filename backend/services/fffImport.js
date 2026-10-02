@@ -8,12 +8,13 @@
  *    (equipe, date, nom normalisé) ; aucune ligne n'est créée si un
  *    rattachement est possible ;
  *  - la FFF fait foi sur le score : un score FFF publié écrase le score app ;
- *  - buteurs n'est jamais modifié.
+ *  - buteurs n'est jamais modifié ;
+ *  - chaque club adverse est rattaché ou créé dans clubs par son cl_no
+ *    (services/clubsFff.js), sans toucher à ses noms d'affichage ni à ses logos.
  */
 
 const axios = require('axios');
 const pool  = require('../db');
-const { ensureAdversaireClub } = require('../utils/ensureClub');
 
 // API FFF DOFA (publique, sans authentification)
 const DOFA_BASE = 'https://api-dofa.fff.fr';
@@ -131,6 +132,8 @@ function parseMatch(raw) {
     adversaire:       toTitleCase(advSide.short_name || 'Inconnu'),
     adversaire_noms:  [advSide.short_name, advSide.short_name_ligue, advSide.short_name_federation]
                         .filter(Boolean).map(normalizeName),
+    adversaire_cl_no:     advSide.club?.cl_no ?? null,
+    adversaire_equipe_no: advSide.code ?? advSide.number ?? null,
     logo_adversaire:  advSide.club?.logo || null,
     date:             new Date(raw.date).toISOString().slice(0, 10),
     heure:            parseHeure(raw.time),
@@ -230,9 +233,10 @@ async function insertMatch(client, m) {
         fff_match_id, journee, competition_type,
         terrain_nom, terrain_adresse, terrain_cp, terrain_ville,
         forfait_scr, forfait_adv, reporte, fff_updated_at,
-        fff_cp_no, fff_phase_no, fff_poule_no, poule_nom)
+        fff_cp_no, fff_phase_no, fff_poule_no, poule_nom,
+        adversaire_cl_no, adversaire_equipe_no)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,
-             $28,$29,$30,$31)
+             $28,$29,$30,$31,$32,$33)
      RETURNING id`,
     [
       m.equipe, m.adversaire, m.logo_adversaire, m.date, m.heure, m.lieu, m.domicile, m.division,
@@ -246,6 +250,7 @@ async function insertMatch(client, m) {
       m.terrain_nom, m.terrain_adresse, m.terrain_cp, m.terrain_ville,
       m.forfait_scr, m.forfait_adv, m.reporte, m.fff_updated_at,
       m.fff_cp_no, m.fff_phase_no, m.fff_poule_no, m.poule_nom,
+      m.adversaire_cl_no, m.adversaire_equipe_no,
     ]
   );
   return rows[0].id;
@@ -275,6 +280,8 @@ async function updateMatch(client, row, m) {
   setCoalesce('fff_phase_no',     m.fff_phase_no);
   setCoalesce('fff_poule_no',     m.fff_poule_no);
   setCoalesce('poule_nom',        m.poule_nom);
+  setCoalesce('adversaire_cl_no',     m.adversaire_cl_no);
+  setCoalesce('adversaire_equipe_no', m.adversaire_equipe_no);
 
   // Terrain : uniquement si la FFF en fournit un (terrain peut être null)
   if (m.terrain_nom || m.terrain_ville) {
@@ -341,6 +348,7 @@ async function importFFF({ dryRun = false } = {}) {
     dryRun,
     total: matchs.length,
     created: [], updated: [], scoreChanges: [], ambiguous: [], errors: [],
+    clubs: null,
     skipped,
     matchs,
   };
@@ -379,13 +387,19 @@ async function importFFF({ dryRun = false } = {}) {
   }
 
   if (!dryRun) {
-    for (const c of report.created) ensureAdversaireClub(c.adversaire);
+    // require différé : clubsFff.js dépend lui-même de ce module
+    const { assurerClubs } = require('./clubsFff');
+    report.clubs = await assurerClubs(matchs.map(m => ({
+      cl_no: m.adversaire_cl_no, nom: m.adversaire, autresNoms: m.adversaire_noms,
+    })));
   }
 
   console.log(
     `[FFF] Import${dryRun ? ' (aperçu)' : ''} : ${report.created.length} créé(s), ` +
     `${report.updated.length} mis à jour, ${report.scoreChanges.length} score(s) FFF appliqué(s), ` +
-    `${report.ambiguous.length} ambigu(s), ${report.errors.length} erreur(s)`
+    `${report.ambiguous.length} ambigu(s), ${report.errors.length} erreur(s)` +
+    (report.clubs ? ` ; clubs : ${report.clubs.crees.length} créé(s), ${report.clubs.rattaches.length} rattaché(s), ` +
+                    `${report.clubs.renommes.length} renommé(s), ${report.clubs.ambigus.length} ambigu(s)` : '')
   );
   return report;
 }

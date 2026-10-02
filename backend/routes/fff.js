@@ -76,6 +76,7 @@ router.post('/save', async (req, res) => {
       scoreChanges: report.scoreChanges,
       ambiguous:    report.ambiguous,
       skipped:      report.skipped,
+      clubs:        report.clubs,
     });
   } catch (err) {
     if (err instanceof TacheEnCoursError) return sendTacheEnCours(res, err);

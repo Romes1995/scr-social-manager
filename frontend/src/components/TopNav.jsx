@@ -16,6 +16,7 @@ const TAB_PATH = {
   classements: '/classements',
   templates:   '/templates',
   listes:      '/listes',
+  clubs:       '/clubs',
 };
 
 function activeGroupFromPath(pathname) {
@@ -28,6 +29,7 @@ function activeGroupFromPath(pathname) {
     '/classements': 'classements',
     '/templates':   'gestion',
     '/listes':      'gestion',
+    '/clubs':       'gestion',
     '/admin/users': 'admin',
   };
   return map[pathname] ?? null;
@@ -51,6 +53,7 @@ const NAV_GROUPS = [
     children: [
       { id: 'templates', label: 'Templates', icon: '🎨' },
       { id: 'listes',    label: 'Liste',     icon: '📋' },
+      { id: 'clubs',     label: 'Noms des clubs', icon: '🏟️' },
     ],
   },
 ];

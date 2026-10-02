@@ -6,7 +6,13 @@ CREATE TABLE IF NOT EXISTS clubs (
   equipe VARCHAR(50),
   logo_url TEXT,
   logo_monochrome_url TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
+  created_at TIMESTAMP DEFAULT NOW(),
+  -- Identité FFF et noms d'affichage (migrations/004_clubs_noms.sql)
+  fff_cl_no INTEGER,                            -- club.cl_no DOFA
+  nom_fff VARCHAR(100),                         -- short_name FFF, tenu à jour par l'import
+  nom_affiche VARCHAR(100),                     -- saisi dans l'admin (/clubs), prioritaire
+  nom_court VARCHAR(40),                        -- affichages étroits
+  CONSTRAINT clubs_fff_cl_no_key UNIQUE (fff_cl_no)
 );
 
 CREATE TABLE IF NOT EXISTS joueurs (
@@ -59,6 +65,9 @@ CREATE TABLE IF NOT EXISTS matches (
   fff_phase_no INTEGER,                         -- phase.number
   fff_poule_no INTEGER,                         -- poule.stage_number
   poule_nom VARCHAR(50),                        -- poule.name
+  -- Adversaire DOFA (migrations/004_clubs_noms.sql)
+  adversaire_cl_no INTEGER,                     -- club.cl_no de l'adversaire
+  adversaire_equipe_no INTEGER,                 -- code : numéro réel de l'équipe adverse (1, 2, 3…)
   CONSTRAINT statut_check CHECK (statut IN ('programme', 'en_cours', 'termine')),
   CONSTRAINT matches_unique_equipe_date_adversaire UNIQUE (equipe, date, adversaire),
   CONSTRAINT matches_fff_match_id_key UNIQUE (fff_match_id),
@@ -170,6 +179,7 @@ CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_matches_date    ON matches(date);
 CREATE INDEX IF NOT EXISTS idx_matches_statut  ON matches(statut);
 CREATE INDEX IF NOT EXISTS idx_matches_equipe  ON matches(equipe);
+CREATE INDEX IF NOT EXISTS idx_matches_adversaire_cl_no ON matches(adversaire_cl_no);
 CREATE INDEX IF NOT EXISTS idx_classements_equipe ON classements(equipe, saison, rang);
 CREATE INDEX IF NOT EXISTS idx_taches_log_debut ON taches_log(debut DESC);
 CREATE INDEX IF NOT EXISTS idx_taches_log_tache ON taches_log(tache, debut DESC);
