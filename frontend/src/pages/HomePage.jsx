@@ -92,10 +92,6 @@ function fmtHeure(h) {
   const [hh, mm] = String(h).slice(0,5).split(':');
   return `${hh}h${mm}`;
 }
-function initials(name = '') {
-  const p = name.trim().split(' ');
-  return p.length >= 2 ? `${p[0][0]}. ${p.slice(1).join(' ')}` : name;
-}
 
 // ── HeroSlider ────────────────────────────────────────────────────────────────
 
@@ -225,8 +221,13 @@ function ClubLogo({ localPath, cdnUrl, nom, size = 44 }) {
 
   const [idx, setIdx] = useState(0);
 
-  // reset quand les sources changent (changement de match)
-  useEffect(() => { setIdx(0); }, [localPath, cdnUrl]);
+  // reset quand les sources changent (changement de match) : ajustement pendant le rendu
+  const cleSources = `${localPath}|${cdnUrl}`;
+  const [sourcesVues, setSourcesVues] = useState(cleSources);
+  if (sourcesVues !== cleSources) {
+    setSourcesVues(cleSources);
+    setIdx(0);
+  }
 
   if (idx >= sources.length) {
     return (
@@ -407,7 +408,12 @@ function ScorerAvatar({ photoPath, nom, color }) {
   const [failed, setFailed] = useState(false);
   const ini = (nom || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0] ?? '').join('').toUpperCase();
 
-  useEffect(() => { setFailed(false); }, [photoPath]);
+  // nouvelle photo : nouvel essai d'affichage (ajustement pendant le rendu)
+  const [photoVue, setPhotoVue] = useState(photoPath);
+  if (photoVue !== photoPath) {
+    setPhotoVue(photoPath);
+    setFailed(false);
+  }
 
   if (!photoPath || failed) {
     return (
@@ -448,8 +454,12 @@ function TopScorersCarousel() {
     return () => clearInterval(id);
   }, [paused, scorers.length]);
 
-  // reset slide index si les données changent
-  useEffect(() => { setCur(0); }, [scorers.length]);
+  // reset slide index si les données changent (ajustement pendant le rendu)
+  const [nbVu, setNbVu] = useState(scorers.length);
+  if (nbVu !== scorers.length) {
+    setNbVu(scorers.length);
+    setCur(0);
+  }
 
   return (
     <div className="ts"
@@ -517,7 +527,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [matches,     setMatches]     = useState([]);
   const [mLoading,    setMLoading]    = useState(true);
-  const [importing,   setImporting]   = useState(false);
+  const [,            setImporting]   = useState(false);
   const [toast,       setToast]       = useState(null);
   const [classement,  setClassement]  = useState({});
 

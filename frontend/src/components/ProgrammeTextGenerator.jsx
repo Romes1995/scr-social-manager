@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { generateMatchText } from '../services/api';
 
-export default function ProgrammeTextGenerator({ matchIds, weekendLabel }) {
+export default function ProgrammeTextGenerator({ matchIds }) {
   const [text, setText]         = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);

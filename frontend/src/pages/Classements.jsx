@@ -138,7 +138,7 @@ function ButeursSection({ buteurs, loading, classement }) {
         }
       });
       return Object.values(map)
-        .map(({ _maxButs, ...r }) => r)
+        .map(r => { const sansMax = { ...r }; delete sansMax._maxButs; return sansMax; })
         .sort((a, b) => b.buts - a.buts);
     }
     return buteurs

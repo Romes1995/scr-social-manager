@@ -445,13 +445,15 @@ const PRESET_W = 260;
 
 function PresetTemplateCard({ type, info }) {
   const def = PRESET_ZONES[type];
-  if (!def || !info) return null;
 
+  // Hooks avant tout retour anticipé (même ordre d'appel à chaque rendu)
   const [variant,      setVariant]      = useState(1);
   const [showOverlay,  setShowOverlay]  = useState(false);
   const [generatedUrl, setGeneratedUrl] = useState(null);
   const [generating,   setGenerating]   = useState(false);
   const [genError,     setGenError]     = useState(null);
+
+  if (!def || !info) return null;
 
   const fichier = def.hasVariants ? (info.variants?.[variant]?.fichier ?? null) : (info.fichier ?? null);
   const zones   = def.hasVariants ? (def.variants?.[variant] ?? [])             : (def.zones ?? []);

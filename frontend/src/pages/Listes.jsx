@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
-  getClubs, createClub, updateClub, deleteClub,
+  getClubs, createClub, deleteClub,
   getJoueurs, createJoueur, updateJoueur, deleteJoueur,
   uploadClubLogo, uploadScrLogo, uploadScrLogoMono, bulkUploadLogos, saveLogoAssociations,
   getLogosTemporaires, createLogoTemporaire, updateLogoTemporaire, deleteLogoTemporaire, toggleLogoTemporaire,
@@ -39,11 +39,6 @@ function calcAge(ddn) {
   return age;
 }
 
-function imgUrl(path) {
-  if (!path) return null;
-  const base = path.startsWith('/') ? path : '/' + path;
-  return `${API_BASE_URL}${base}?v=${Date.now()}`;
-}
 
 function ImageUploadZone({ src, label, fieldName, joueurId, onUploaded, placeholder }) {
   const inputRef = useRef(null);
@@ -273,20 +268,16 @@ export default function Listes() {
 // ─── Logo SCR ─────────────────────────────────────────────────────────────────
 
 function ScrLogoSection() {
-  const [logoSrc, setLogoSrc]         = useState(null);
-  const [monoSrc, setMonoSrc]         = useState(null);
+  const base     = `${API_BASE_URL}/uploads/logos/scr.png`;
+  const baseMono = `${API_BASE_URL}/uploads/logos/scr_monochrome.png`;
+  // URLs avec horodatage dès le premier rendu (contourne le cache navigateur)
+  const [logoSrc, setLogoSrc]         = useState(() => `${base}?t=${Date.now()}`);
+  const [monoSrc, setMonoSrc]         = useState(() => `${baseMono}?t=${Date.now()}`);
   const [uploading, setUploading]     = useState(false);
   const [uploadingMono, setUploadingMono] = useState(false);
   const [msg, setMsg]                 = useState(null);
   const fileRef     = useRef(null);
   const fileRefMono = useRef(null);
-  const base     = `${API_BASE_URL}/uploads/logos/scr.png`;
-  const baseMono = `${API_BASE_URL}/uploads/logos/scr_monochrome.png`;
-
-  useEffect(() => {
-    setLogoSrc(`${base}?t=${Date.now()}`);
-    setMonoSrc(`${baseMono}?t=${Date.now()}`);
-  }, []);
 
   const showMsg = (type, text) => { setMsg({ type, text }); setTimeout(() => setMsg(null), 4000); };
 

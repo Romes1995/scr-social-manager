@@ -52,7 +52,7 @@ export default function ScoreLive() {
 
       // Auto-select le match en cours s'il y en a un
       const enCours = activeMatches.find(m => m.statut === 'en_cours');
-      if (enCours && !selectedMatch) setSelectedMatch(enCours);
+      if (enCours) setSelectedMatch(prev => prev ?? enCours);
     } catch {
       showAlert('error', 'Erreur lors du chargement');
     } finally {
@@ -63,17 +63,21 @@ export default function ScoreLive() {
   useEffect(() => { loadData(); }, [loadData]);
 
   // Rafraîchir le match sélectionné toutes les 5 secondes si en cours
+  const selectedId     = selectedMatch?.id;
+  const selectedStatut = selectedMatch?.statut;
   useEffect(() => {
-    if (!selectedMatch || selectedMatch.statut !== 'en_cours') return;
+    if (!selectedId || selectedStatut !== 'en_cours') return;
     const interval = setInterval(async () => {
       try {
         const res = await getMatches();
-        const updated = res.data.find(m => m.id === selectedMatch.id);
+        const updated = res.data.find(m => m.id === selectedId);
         if (updated) setSelectedMatch(updated);
-      } catch {}
+      } catch {
+        // échec ponctuel : nouvel essai au prochain intervalle
+      }
     }, 5000);
     return () => clearInterval(interval);
-  }, [selectedMatch?.id, selectedMatch?.statut]);
+  }, [selectedId, selectedStatut]);
 
   const handleAction = async (action, extra = {}) => {
     if (!selectedMatch) return;
