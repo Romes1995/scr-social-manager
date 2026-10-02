@@ -1,14 +1,16 @@
 import { useLayoutEffect, useRef, useState } from 'react';
+import Pastille from './Pastille';
+import { logoPastille } from './visuels';
 import { dateLongue, decouperHeure, libelleEquipe, villeCasse } from './format';
 
 const COULEUR_EQUIPE = { 'SCR 1': '#3dff6e', 'SCR 2': '#5500ff', 'SCR 3': '#00bf63' };
 
 const TAILLE_NOM = 30;      // px
-const TAILLE_NOM_MIN = 22;  // px : en dessous, le nom est coupé (…)
+const TAILLE_NOM_MIN = 18;  // px : en dessous, le nom est coupé (…)
 
 /**
  * Nom d'équipe sur une ligne : nom complet, sinon nom court s'il déborde,
- * sinon police réduite jusqu'à 22 px. Mesuré une fois les polices chargées.
+ * sinon police réduite jusqu’à 18 px. Mesuré une fois les polices chargées.
  * Le composant est remonté (key) quand le nom change.
  */
 function NomEquipe({ complet, court }) {
@@ -44,9 +46,10 @@ function NomEquipe({ complet, court }) {
   );
 }
 
+// Pictos du talon : domicile (maison) ou extérieur (avion), 26 px, vert anglais
 function PictoMaison() {
   return (
-    <svg className="acc-picto" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="acc-picto" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M3 11.2 12 4l9 7.2V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1z" fill="currentColor" />
     </svg>
   );
@@ -54,20 +57,22 @@ function PictoMaison() {
 
 function PictoAvion() {
   return (
-    <svg className="acc-picto" width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="acc-picto" width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M21 15.5v-2l-8-5V3.8a1.5 1.5 0 0 0-3 0v4.7l-8 5v2l8-2.5V18l-2 1.5V21l3.5-1 3.5 1v-1.5L13 18v-5z" fill="currentColor" />
     </svg>
   );
 }
 
-export default function Billet({ match }) {
+export default function Billet({ match, logoScr }) {
   const heure   = decouperHeure(match.heure);
   const coupe   = match.competition_type === 'CP';
   const ville   = villeCasse(match.terrain?.ville);
   const domicile = match.domicile;
 
-  const lieu = domicile ? 'À domicile, voir le stade' : `${ville || 'Lieu du match'}, itinéraire`;
-  const resume = `${libelleEquipe(match.equipe)} : ${match.equipe_domicile} reçoit ${match.equipe_exterieur}, ` +
+  const lieu = domicile ? 'Voir le stade' : ville ? `Itinéraire, ${ville}` : 'Itinéraire';
+  const logoAdv = logoPastille({ mini: match.logo_adversaire_mini, logo: match.logo_adversaire });
+  const resume = `${libelleEquipe(match.equipe)} : ${match.equipe_domicile} reçoit ${match.equipe_exterieur} ` +
+    `(${domicile ? 'à domicile' : 'à l\'extérieur'}), ` +
     `${dateLongue(match.date)}${match.reporte ? ', match reporté' : heure ? ` à ${heure.h} h ${heure.m}` : ''}`;
 
   return (
@@ -78,12 +83,18 @@ export default function Billet({ match }) {
         </p>
         <p className="acc-billet-date">{dateLongue(match.date)}</p>
         <div className="acc-billet-affiche">
-          <NomEquipe key={`d-${match.equipe_domicile}`} complet={match.equipe_domicile} court={match.equipe_domicile_court} />
+          {/* Pastille à gauche du nom : la largeur restante sert au calcul du nom court */}
+          <span className="acc-billet-equipe">
+            <Pastille src={domicile ? logoScr : logoAdv} taille={28} bordure lazy={false} />
+            <NomEquipe key={`d-${match.equipe_domicile}`} complet={match.equipe_domicile} court={match.equipe_domicile_court} />
+          </span>
           <span className="acc-billet-recoit">reçoit</span>
-          <NomEquipe key={`e-${match.equipe_exterieur}`} complet={match.equipe_exterieur} court={match.equipe_exterieur_court} />
+          <span className="acc-billet-equipe">
+            <Pastille src={domicile ? logoAdv : logoScr} taille={28} bordure lazy={false} />
+            <NomEquipe key={`e-${match.equipe_exterieur}`} complet={match.equipe_exterieur} court={match.equipe_exterieur_court} />
+          </span>
         </div>
         <div className="acc-billet-lieu">
-          {domicile ? <PictoMaison /> : <PictoAvion />}
           {match.lien_itineraire ? (
             <a href={match.lien_itineraire} target="_blank" rel="noopener">{lieu}</a>
           ) : (
@@ -94,6 +105,8 @@ export default function Billet({ match }) {
 
       <div className="acc-billet-talon" aria-hidden="true">
         <span className="acc-billet-bandeau" style={{ background: COULEUR_EQUIPE[match.equipe] || 'var(--acc-dore)' }} />
+        {/* Bloc centré : picto, heure, minutes, journée */}
+        {domicile ? <PictoMaison /> : <PictoAvion />}
         {match.reporte ? (
           <span className="acc-billet-reporte">Reporté</span>
         ) : heure ? (

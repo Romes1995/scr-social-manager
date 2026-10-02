@@ -13,6 +13,7 @@
 const pool = require('../db');
 const club = require('../config/club');
 const { lireClassements, saisonCourante } = require('./fffClassement');
+const { miniSiDisponible } = require('../utils/logoMini');
 const {
   nommerAdversaire, SQL_JOIN_CLUB_ADVERSAIRE, SQL_LOGO_ADVERSAIRE, SQL_NOMS_ADVERSAIRE,
 } = require('./clubsFff');
@@ -83,7 +84,8 @@ const heureCourte = (h) => (h ? String(h).slice(0, 5) : null);
 const SQL_PREMIER_JOUR = `
   SELECT MIN(date)::text AS jour FROM matches WHERE statut = 'programme' AND date >= $1::date`;
 
-// Matchs programmés de la fenêtre (jours passés exclus), reportés compris
+// Matchs programmés de la fenêtre (jours passés exclus), reportés compris,
+// dans l'ordre des équipes (SCR 1, 2, 3) quelle que soit l'heure
 const SQL_PROCHAINS = `
   SELECT m.equipe, m.division, m.competition_type, m.journee, m.date, m.heure, m.domicile,
          m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
@@ -91,7 +93,7 @@ const SQL_PROCHAINS = `
     FROM matches m
     ${SQL_JOIN_CLUB_ADVERSAIRE}
    WHERE m.statut = 'programme' AND m.date BETWEEN GREATEST($1::date, $2::date) AND $3::date
-   ORDER BY m.date, m.heure NULLS LAST, m.equipe`;
+   ORDER BY m.equipe, m.date, m.heure NULLS LAST`;
 
 // Dernier score officiel FFF (amicaux et scores non publiés exclus d'office)
 const SQL_RESULTATS = `
@@ -136,6 +138,7 @@ function formaterProchain(ligne) {
     adversaire:        r.adversaire,
     adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
+    logo_adversaire_mini: miniSiDisponible(r.logo),   // 64 px, logos locaux seulement
     ...equipesDuMatch(r),
     terrain,
     lien_itineraire:   lienItineraire(terrain),
@@ -166,6 +169,7 @@ function formaterResultat(ligne) {
     adversaire:        r.adversaire,
     adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
+    logo_adversaire_mini: miniSiDisponible(r.logo),
     ...equipesDuMatch(r),
     score_domicile:    r.domicile ? r.score_scr : r.score_adv,
     score_exterieur:   r.domicile ? r.score_adv : r.score_scr,
@@ -191,6 +195,7 @@ function formaterClassements(classements) {
         nom_affiche:    r.equipe,         // nom d'affichage (sinon FFF) + numéro d'équipe
         nom_court:      r.equipe_court,
         logo:           r.logo,
+        logo_mini:      miniSiDisponible(r.logo),
         points:         r.points,
         joues:          r.joues,
         victoires:      r.victoires,
@@ -238,7 +243,8 @@ async function construireAccueil({ aujourdhui = dateParis() } = {}) {
   const saison = saisonCourante(new Date(`${aujourdhui}T12:00:00Z`));
 
   return {
-    club: { nom: club.nom, logo: club.logo, saison: `${saison}-${saison + 1}` },
+    // logo : logo SCR enregistré dans l'admin ; logo_mini : sa miniature 64 px (pastilles)
+    club: { nom: club.nom, logo: club.logo, logo_mini: miniSiDisponible(club.logo), saison: `${saison}-${saison + 1}` },
     prochains:   prochains.map(formaterProchain),
     fenetre,
     resultats:   resultats.rows.map(formaterResultat),

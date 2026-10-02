@@ -3,6 +3,8 @@
  * Pour chacun, une version mobile et une version ordinateur (≥ 1024 px), en taille
  * d'affichage : width / height réservent la place avant le chargement.
  */
+import { urlImage } from '../services/api';
+
 const V = '/visuels/web';
 const img = (fichier, width, height) => ({ src: `${V}/${fichier}.webp`, width, height });
 
@@ -18,9 +20,26 @@ export const VISUELS = {
   titreClassements:     { alt: 'Classements',               mobile: img('titre-classements-225', 225, 40),         bureau: img('titre-classements-310', 310, 55) },
   slogan:               { alt: 'Maintenant ça part !!!',    mobile: img('slogan-300', 300, 104),                   bureau: img('slogan-380', 380, 132) },
   logo90Ans:            { alt: '90 ans du SC Roeschwoog, 1937-2027', mobile: img('logo-90-ans-dore-150', 150, 91), bureau: img('logo-90-ans-dore-190', 190, 116) },
+  // Photo d'en-tête : recadrages mobile (390 / 780 px) et ordinateur (1280 / 1920 px)
+  photoEntete: {
+    mobile: { srcSet: `${V}/photo-entete-mobile-390.webp 390w, ${V}/photo-entete-mobile-780.webp 780w`, src: `${V}/photo-entete-mobile-390.webp`, width: 390, height: 440 },
+    bureau: { srcSet: `${V}/photo-entete-bureau-1280.webp 1280w, ${V}/photo-entete-bureau-1920.webp 1920w`, width: 1920, height: 960 },
+  },
   issue: {
     victoire: { alt: 'Victoire',  mobile: img('issue-victoire-h22', 80, 22), bureau: img('issue-victoire-h24', 87, 24) },
     nul:      { alt: 'Match nul', mobile: img('issue-nul-h22', 86, 22),      bureau: img('issue-nul-h24', 93, 24) },
     defaite:  { alt: 'Défaite',   mobile: img('issue-defaite-h22', 72, 22),  bureau: img('issue-defaite-h24', 79, 24) },
   },
 };
+
+/**
+ * Source du logo d'un club dans une pastille. Le backend donne en priorité le logo
+ * de la base (admin, visuels Match Day / Résultats), SCR compris, et le logo FFF
+ * en dernier recours : on prend la miniature 64 px du logo de la base, sinon le
+ * logo FFF externe (déjà léger). Jamais un logo local en taille réelle (plusieurs Mo).
+ */
+export function logoPastille({ mini = null, logo = null } = {}) {
+  if (mini) return urlImage(mini);
+  if (logo && /^https?:\/\//.test(logo)) return logo;
+  return null;
+}

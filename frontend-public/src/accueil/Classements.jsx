@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import Visuel from './Visuel';
+import Pastille from './Pastille';
 import useEcranLarge from './useEcranLarge';
 import { diffSignee, infoClassement, jourMois, libelleEquipe, lignesAutourScr } from './format';
-import { VISUELS } from './visuels';
+import { VISUELS, logoPastille } from './visuels';
 
 function Ligne({ l }) {
   return (
     <div role="row" className={`acc-cl-ligne${l.is_scr ? ' acc-cl-scr' : ''}`}>
       <span role="cell" className="acc-cl-rang">{l.rang}</span>
-      <span role="cell" className="acc-cl-club" title={l.nom_affiche}>{l.nom_affiche}</span>
+      <span role="cell" className="acc-cl-club" title={l.nom_affiche}>
+        <Pastille src={logoPastille({ mini: l.logo_mini, logo: l.logo })} taille={20} bordure={!l.is_scr} />
+        <span className="acc-cl-club-nom">{l.nom_affiche}</span>
+      </span>
       <span role="cell" className="acc-cl-num">{l.joues}</span>
       <span role="cell" className="acc-cl-num">{diffSignee(l.diff)}</span>
       <span role="cell" className="acc-cl-pts">{l.points}</span>

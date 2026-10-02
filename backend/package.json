@@ -7,6 +7,7 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "creer-admin": "node scripts/creer-admin.js",
+    "logos-mini": "node scripts/generer-logos-mini.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

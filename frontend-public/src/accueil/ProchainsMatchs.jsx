@@ -9,7 +9,7 @@ import { VISUELS } from './visuels';
  * Titre : « Ce week-end au stade » pour le week-end qui vient ; sinon « Prochain
  * match » (un billet) ou « Prochains matchs » (plusieurs, ou aucun), avec la date.
  */
-export default function ProchainsMatchs({ prochains, fenetre }) {
+export default function ProchainsMatchs({ prochains, fenetre, logoScr }) {
   const large = useEcranLarge();
   const ceWeekEnd = Boolean(fenetre?.est_ce_week_end) && prochains.length > 0;
 
@@ -24,7 +24,6 @@ export default function ProchainsMatchs({ prochains, fenetre }) {
 
   return (
     <section className="acc-section acc-vert acc-grain acc-prochains" aria-labelledby="acc-titre-prochains">
-      <span className="acc-ligne-mediane" aria-hidden="true" />
       <div className="acc-col acc-prochains-tete">
         <h2 id="acc-titre-prochains" className="acc-titre-images">
           <Visuel v={titre} fetchPriority="high" />
@@ -42,9 +41,10 @@ export default function ProchainsMatchs({ prochains, fenetre }) {
 
       {prochains.length > 0 && (
         <div className="acc-terrain">
+          <span className="acc-ligne-mediane" aria-hidden="true" />
           <span className="acc-rond-central" aria-hidden="true" />
           <div className="acc-billets" role="region" aria-label="Billets des prochains matchs" tabIndex={0}>
-            {prochains.map(m => <Billet key={`${m.equipe}-${m.date}-${m.heure}`} match={m} />)}
+            {prochains.map(m => <Billet key={`${m.equipe}-${m.date}-${m.heure}`} match={m} logoScr={logoScr} />)}
           </div>
         </div>
       )}

@@ -7,6 +7,11 @@ const pool    = require('../db');
 const { invaliderCache: invaliderCacheAccueil } = require('../services/accueilPublic');
 const { saisonCourante } = require('../services/fffClassement');
 const { nomClub } = require('../services/clubsFff');
+const { genererMini } = require('../utils/logoMini');
+
+// Miniature 64 px pour la vitrine, sans bloquer la réponse
+const miniatureEnFond = (url) =>
+  genererMini(url).catch(err => console.error(`[logoMini] ${url} :`, err.message));
 
 const LONGUEUR_MAX = { nom_affiche: 100, nom_court: 40 };
 
@@ -113,6 +118,7 @@ router.get('/', async (req, res) => {
 // ─── POST /api/clubs/scr-logo — Upload logo SCR (fixe) ───────────────────────
 router.post('/scr-logo', uploadScr.single('logo'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Fichier logo requis' });
+  miniatureEnFond('/uploads/logos/scr.png');
   res.json({ success: true, logo_url: '/uploads/logos/scr.png' });
 });
 
@@ -160,6 +166,7 @@ router.post('/save-logo-associations', async (req, res) => {
             'UPDATE clubs SET logo_url=$1 WHERE LOWER(TRIM(nom))=LOWER($2)',
             [url, nom]
           );
+          miniatureEnFond(url);
           updated.push({ club: nom, type: 'couleur', url });
         }
       } catch (err) {
@@ -228,6 +235,7 @@ router.post('/:id/logo', uploadClub.single('logo'), async (req, res) => {
       'UPDATE clubs SET logo_url=$1 WHERE LOWER(TRIM(nom))=LOWER($2)',
       [logoUrl, nom]
     );
+    miniatureEnFond(logoUrl);
 
     const updated = await pool.query('SELECT * FROM clubs WHERE id=$1', [req.params.id]);
     res.json({ success: true, club: updated.rows[0] });
@@ -272,6 +280,7 @@ router.put('/:id', async (req, res) => {
       `UPDATE clubs SET ${sets.join(', ')} WHERE id=$${params.length} RETURNING *`, params);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Club non trouvé' });
 
+    if (body.logo_url) miniatureEnFond(body.logo_url);
     // Noms et logos affichés sur le site public : l'accueil est recalculé
     invaliderCacheAccueil();
     res.json(result.rows[0]);

@@ -7,7 +7,7 @@ export const CLUB = {
   stade:   'Stade Jean Pierre',
   adresse: '1 rue du Stade, 67480 Roeschwoog',
   reseaux: {
-    facebook:  '',   // TODO : lien de la page Facebook du club
-    instagram: '',   // TODO : lien du compte Instagram du club
+    facebook:  'https://www.facebook.com/profile.php?id=100057172221722',
+    instagram: 'https://www.instagram.com/sc.roeschwoog/',
   },
 };

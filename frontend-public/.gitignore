@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Photos originales (sources de npm run visuels, trop lourdes pour git)
+sources/photos/

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { getAccueil } from '../services/api';
 import EnTete from './EnTete';
+import PhotoEntete from './PhotoEntete';
 import ProchainsMatchs from './ProchainsMatchs';
 import DerniersResultats from './DerniersResultats';
 import Classements from './Classements';
 import PiedDePage from './PiedDePage';
 import Squelette from './Squelette';
+import { logoPastille } from './visuels';
 import './Accueil.css';
 
 /**
@@ -23,9 +25,12 @@ export default function Accueil() {
   }, []);
 
   const { statut, data } = etat;
+  // Logo SCR des pastilles : celui enregistré dans l'admin (miniature servie par l'API)
+  const logoScr = data ? logoPastille({ mini: data.club?.logo_mini, logo: data.club?.logo }) : null;
 
   return (
     <div className="acc">
+      <PhotoEntete />
       <EnTete />
       <main>
         {statut === 'chargement' && <Squelette />}
@@ -38,8 +43,8 @@ export default function Accueil() {
         )}
         {statut === 'ok' && (
           <>
-            <ProchainsMatchs prochains={data.prochains || []} fenetre={data.fenetre} />
-            <DerniersResultats resultats={data.resultats || []} />
+            <ProchainsMatchs prochains={data.prochains || []} fenetre={data.fenetre} logoScr={logoScr} />
+            <DerniersResultats resultats={data.resultats || []} logoScr={logoScr} />
             <Classements classements={data.classements || {}} />
           </>
         )}
