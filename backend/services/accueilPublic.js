@@ -1,13 +1,18 @@
 /**
- * Données de la page d'accueil publique (GET /api/public/accueil)
+ * Données de la page d'accueil publique (GET /api/public/accueil) et de la page
+ * télé du club-house (GET /api/public/tele)
  *
  * Une seule réponse : prochains matchs (week-end ou jour du prochain match) et
  * leur résumé, derniers résultats officiels FFF, classements et identité du club.
  * Lecture seule en base, aucun appel à la FFF. Toutes les dates sont calculées
  * en heure de Paris.
  *
- * Cache mémoire : vidé par invaliderCache() à la fin de chaque tâche FFF
- * (services/scheduler.js), avec une durée de vie maximale de 10 minutes.
+ * Page télé : mêmes prochains matchs, noms et logos ; pour chaque équipe, ses
+ * 3 derniers résultats FFF et son classement complet.
+ *
+ * Cache mémoire (un par page) : vidé par invaliderCache() à la fin de chaque tâche
+ * FFF (services/scheduler.js) et après la modification d'un club, avec une durée
+ * de vie maximale de 10 minutes.
  */
 
 const pool = require('../db');
@@ -106,6 +111,19 @@ const SQL_RESULTATS = `
    WHERE m.score_source = 'fff' AND m.date <= $1::date
    ORDER BY m.equipe, m.date DESC, m.heure DESC NULLS LAST`;
 
+// Page télé : les 3 derniers scores officiels FFF de chaque équipe, toutes compétitions
+const SQL_RESULTATS_TELE = `
+  SELECT * FROM (
+    SELECT m.equipe, m.division, m.competition_type, m.journee, m.date, m.domicile,
+           m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
+           m.score_scr, m.score_adv, m.tab_domicile, m.tab_exterieur,
+           ROW_NUMBER() OVER (PARTITION BY m.equipe ORDER BY m.date DESC, m.heure DESC NULLS LAST) AS n
+      FROM matches m
+      ${SQL_JOIN_CLUB_ADVERSAIRE}
+     WHERE m.score_source = 'fff' AND m.date <= $1::date
+  ) r
+  WHERE n <= 3
+  ORDER BY equipe, date DESC`;
 
 // ── Construction ──────────────────────────────────────────────────────────────
 
@@ -212,16 +230,9 @@ function formaterClassements(classements) {
   return result;
 }
 
-/**
- * Construit la réponse sans cache.
- * `aujourdhui` ('YYYY-MM-DD') est injectable pour les tests ; par défaut, la date de Paris.
- */
-async function construireAccueil({ aujourdhui = dateParis() } = {}) {
-  const [premier, resultats, classements] = await Promise.all([
-    pool.query(SQL_PREMIER_JOUR, [aujourdhui]),
-    pool.query(SQL_RESULTATS, [aujourdhui]),
-    lireClassements(),
-  ]);
+// Prochains matchs : fenêtre (week-end ou jour isolé) du prochain match à venir
+async function prochainsEtFenetre(aujourdhui) {
+  const premier = await pool.query(SQL_PREMIER_JOUR, [aujourdhui]);
 
   // Fenêtre : week-end (vendredi-dimanche) ou jour isolé du prochain match
   const jour = premier.rows[0].jour;
@@ -240,12 +251,29 @@ async function construireAccueil({ aujourdhui = dateParis() } = {}) {
     exterieur:       prochains.length - domicile,
   };
 
+  return { prochains: prochains.map(formaterProchain), fenetre };
+}
+
+// Identité du club ; logo : logo SCR enregistré dans l'admin, logo_mini : sa miniature 64 px
+function infosClub(aujourdhui) {
   const saison = saisonCourante(new Date(`${aujourdhui}T12:00:00Z`));
+  return { nom: club.nom, logo: club.logo, logo_mini: miniSiDisponible(club.logo), saison: `${saison}-${saison + 1}` };
+}
+
+/**
+ * Construit la réponse sans cache.
+ * `aujourdhui` ('YYYY-MM-DD') est injectable pour les tests ; par défaut, la date de Paris.
+ */
+async function construireAccueil({ aujourdhui = dateParis() } = {}) {
+  const [{ prochains, fenetre }, resultats, classements] = await Promise.all([
+    prochainsEtFenetre(aujourdhui),
+    pool.query(SQL_RESULTATS, [aujourdhui]),
+    lireClassements(),
+  ]);
 
   return {
-    // logo : logo SCR enregistré dans l'admin ; logo_mini : sa miniature 64 px (pastilles)
-    club: { nom: club.nom, logo: club.logo, logo_mini: miniSiDisponible(club.logo), saison: `${saison}-${saison + 1}` },
-    prochains:   prochains.map(formaterProchain),
+    club:        infosClub(aujourdhui),
+    prochains,
     fenetre,
     resultats:   resultats.rows.map(formaterResultat),
     classements: formaterClassements(classements),
@@ -253,20 +281,54 @@ async function construireAccueil({ aujourdhui = dateParis() } = {}) {
   };
 }
 
-// ── Cache ─────────────────────────────────────────────────────────────────────
+/**
+ * Page télé : prochains matchs (comme l'accueil) et, pour chaque équipe suivie
+ * (config/club.js, toujours présente même sans données), ses 3 derniers résultats
+ * FFF (du plus récent au plus ancien, avec journee) et son classement complet.
+ */
+async function construireTele({ aujourdhui = dateParis() } = {}) {
+  const [{ prochains, fenetre }, resultats, classements] = await Promise.all([
+    prochainsEtFenetre(aujourdhui),
+    pool.query(SQL_RESULTATS_TELE, [aujourdhui]),
+    lireClassements(),
+  ]);
 
-let cache = null;   // { data, at }
+  const parEquipe = formaterClassements(classements);
+  const equipes = [...new Set([...club.equipes, ...Object.keys(parEquipe)])].sort();
 
-function invaliderCache() {
-  cache = null;
+  return {
+    club: infosClub(aujourdhui),
+    prochains,
+    fenetre,
+    equipes: equipes.map(equipe => ({
+      equipe,
+      resultats:  resultats.rows.filter(r => r.equipe === equipe)
+                    .map(r => ({ ...formaterResultat(r), journee: r.journee })),
+      classement: parEquipe[equipe] ?? null,
+    })),
+    genere_at: new Date().toISOString(),
+  };
 }
 
-// Réponse de la route publique : servie depuis le cache s'il est valide
-async function getAccueil() {
-  if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.data;
-  const data = await construireAccueil();
-  cache = { data, at: Date.now() };
+// ── Cache ─────────────────────────────────────────────────────────────────────
+
+const caches = { accueil: null, tele: null };   // { data, at }
+
+function invaliderCache() {
+  caches.accueil = null;
+  caches.tele = null;
+}
+
+async function depuisCache(nom, construire) {
+  const c = caches[nom];
+  if (c && Date.now() - c.at < CACHE_TTL_MS) return c.data;
+  const data = await construire();
+  caches[nom] = { data, at: Date.now() };
   return data;
 }
 
-module.exports = { getAccueil, construireAccueil, invaliderCache };
+// Réponses des routes publiques : servies depuis le cache s'il est valide
+const getAccueil = () => depuisCache('accueil', construireAccueil);
+const getTele    = () => depuisCache('tele', construireTele);
+
+module.exports = { getAccueil, getTele, construireAccueil, construireTele, invaliderCache };

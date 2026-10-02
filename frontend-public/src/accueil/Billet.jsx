@@ -5,15 +5,15 @@ import { dateLongue, decouperHeure, libelleEquipe, villeCasse } from './format';
 
 const COULEUR_EQUIPE = { 'SCR 1': '#3dff6e', 'SCR 2': '#5500ff', 'SCR 3': '#00bf63' };
 
-const TAILLE_NOM = 30;      // px
-const TAILLE_NOM_MIN = 18;  // px : en dessous, le nom est coupé (…)
+// Tailles par défaut (accueil) ; la page télé passe les siennes
+const TAILLES_ACCUEIL = { nom: 30, nomMin: 18, pastille: 28 };   // px ; sous nomMin, le nom est coupé (…)
 
 /**
  * Nom d'équipe sur une ligne : nom complet, sinon nom court s'il déborde,
- * sinon police réduite jusqu’à 18 px. Mesuré une fois les polices chargées.
+ * sinon police réduite jusqu'à `tailleMin`. Mesuré une fois les polices chargées.
  * Le composant est remonté (key) quand le nom change.
  */
-function NomEquipe({ complet, court }) {
+function NomEquipe({ complet, court, taille: TAILLE_NOM, tailleMin: TAILLE_NOM_MIN }) {
   const ref = useRef(null);
   const [rendu, setRendu] = useState({ texte: complet, taille: TAILLE_NOM });
 
@@ -22,7 +22,7 @@ function NomEquipe({ complet, court }) {
     const ajuster = () => {
       const el = ref.current;
       if (!actif || !el) return;
-      // Largeur du texte à 30 px, mesurée avec la police réelle de l'élément
+      // Largeur du texte à la taille normale, mesurée avec la police réelle de l'élément
       const style = getComputedStyle(el);
       const ctx = document.createElement('canvas').getContext('2d');
       const largeur = (texte) => {
@@ -37,7 +37,7 @@ function NomEquipe({ complet, court }) {
     };
     (document.fonts?.ready ?? Promise.resolve()).then(ajuster);
     return () => { actif = false; };
-  }, [complet, court]);
+  }, [complet, court, TAILLE_NOM, TAILLE_NOM_MIN]);
 
   return (
     <span ref={ref} className="acc-billet-nom" style={{ fontSize: rendu.taille }} title={complet}>
@@ -63,7 +63,12 @@ function PictoAvion() {
   );
 }
 
-export default function Billet({ match, logoScr }) {
+/**
+ * Billet d'un prochain match. `tailles` (nom, nomMin, pastille en px) et
+ * `interactif` (lien itinéraire cliquable, sinon simple texte) sont réglables
+ * pour la page télé. Les logos des billets ne sont jamais chargés en différé.
+ */
+export default function Billet({ match, logoScr, tailles = TAILLES_ACCUEIL, interactif = true, className = '' }) {
   const heure   = decouperHeure(match.heure);
   const coupe   = match.competition_type === 'CP';
   const ville   = villeCasse(match.terrain?.ville);
@@ -76,7 +81,7 @@ export default function Billet({ match, logoScr }) {
     `${dateLongue(match.date)}${match.reporte ? ', match reporté' : heure ? ` à ${heure.h} h ${heure.m}` : ''}`;
 
   return (
-    <article className="acc-billet" aria-label={resume}>
+    <article className={`acc-billet ${className}`.trim()} aria-label={resume}>
       <div className="acc-billet-corps">
         <p className="acc-billet-compet">
           {libelleEquipe(match.equipe)}, {match.competition_court || match.competition}
@@ -85,20 +90,22 @@ export default function Billet({ match, logoScr }) {
         <div className="acc-billet-affiche">
           {/* Pastille à gauche du nom : la largeur restante sert au calcul du nom court */}
           <span className="acc-billet-equipe">
-            <Pastille src={domicile ? logoScr : logoAdv} taille={28} bordure lazy={false} />
-            <NomEquipe key={`d-${match.equipe_domicile}`} complet={match.equipe_domicile} court={match.equipe_domicile_court} />
+            <Pastille src={domicile ? logoScr : logoAdv} taille={tailles.pastille} bordure lazy={false} />
+            <NomEquipe key={`d-${match.equipe_domicile}`} complet={match.equipe_domicile} court={match.equipe_domicile_court}
+              taille={tailles.nom} tailleMin={tailles.nomMin} />
           </span>
           <span className="acc-billet-recoit">reçoit</span>
           <span className="acc-billet-equipe">
-            <Pastille src={domicile ? logoAdv : logoScr} taille={28} bordure lazy={false} />
-            <NomEquipe key={`e-${match.equipe_exterieur}`} complet={match.equipe_exterieur} court={match.equipe_exterieur_court} />
+            <Pastille src={domicile ? logoAdv : logoScr} taille={tailles.pastille} bordure lazy={false} />
+            <NomEquipe key={`e-${match.equipe_exterieur}`} complet={match.equipe_exterieur} court={match.equipe_exterieur_court}
+              taille={tailles.nom} tailleMin={tailles.nomMin} />
           </span>
         </div>
         <div className="acc-billet-lieu">
-          {match.lien_itineraire ? (
+          {interactif && match.lien_itineraire ? (
             <a href={match.lien_itineraire} target="_blank" rel="noopener">{lieu}</a>
           ) : (
-            <span>{domicile ? 'À domicile' : ville || 'Lieu à confirmer'}</span>
+            <span>{interactif ? (domicile ? 'À domicile' : ville || 'Lieu à confirmer') : lieu}</span>
           )}
         </div>
       </div>

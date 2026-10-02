@@ -8,6 +8,9 @@
  *   - <nom>-<largeur>.webp  pour chaque largeur d'affichage (mobile, ordinateur),
  *   - <nom>-h<hauteur>.webp pour les visuels dimensionnés en hauteur (issues),
  *     toujours à 2 fois la taille d'affichage (écrans haute densité) ;
+ *   - <nom>-<largeur>px.webp pour les largeurs de fichier imposées (page télé :
+ *     scène 1920 × 1080 mise à l'échelle, 1× en 1080p et 2× en 4K) ;
+ *   - grain-tele.png : tuile de grain blanc (~14 % d'opacité moyenne) de la page télé ;
  *   - favicon-64.png et apple-touch-icon-180.png depuis logo-scr-couleur.png ;
  *   - photo-entete-{mobile,bureau}-<largeur>.webp : recadrages de la photo d'en-tête
  *     (source sources/photos/, hors git : si elle est absente, les
@@ -21,6 +24,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { Buffer } from 'node:buffer';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
@@ -44,7 +48,16 @@ const VISUELS = [
   { nom: 'issue-victoire',             hauteurs: [22, 24] },
   { nom: 'issue-nul',                  hauteurs: [22, 24] },
   { nom: 'issue-defaite',              hauteurs: [22, 24] },
+  // Page télé : largeurs de fichier (affichage 400 / 300 px sur la scène 1920 × 1080)
+  { nom: 'titre-resultats-blanc',      pixels: [400, 800] },
+  { nom: 'nom-club',                   pixels: [300, 600] },    // en-tête télé, 300 px
+  { nom: 'logo-scr-dore',              pixels: [64, 128] },     // en-tête télé, 64 px
+  { nom: 'titre-classements-blanc',    pixels: [300, 600] },
 ];
+
+// Tuile de grain de la page télé (remplace le filtre SVG calculé en direct, trop
+// coûteux pour un Raspberry Pi) : bruit blanc, alpha moyen ~14 %, reproductible.
+const GRAIN = { fichier: 'grain-tele.png', taille: 256, alphaMoyen: 0.14 };
 
 // Photo d'en-tête : zones de recadrage en fraction de l'original (6263 × 4175),
 // puis tailles de sortie (×2 et ×1). Légère désaturation, contraste +5 %.
@@ -72,8 +85,8 @@ async function main() {
   for (const v of VISUELS) {
     const source = path.join(SOURCES, `${v.nom}.png`);
     if (!fs.existsSync(source)) throw new Error(`source absente : ${source}`);
-    const tailles = v.largeurs
-      ? v.largeurs.map(l => ({ suffixe: `${l}`, resize: { width: l * 2 } }))
+    const tailles = v.largeurs ? v.largeurs.map(l => ({ suffixe: `${l}`, resize: { width: l * 2 } }))
+      : v.pixels ? v.pixels.map(px => ({ suffixe: `${px}px`, resize: { width: px } }))
       : v.hauteurs.map(h => ({ suffixe: `h${h}`, resize: { height: h * 2 } }));
 
     for (const t of tailles) {
@@ -100,6 +113,25 @@ async function main() {
     const info = await img.png({ compressionLevel: 9, palette: true }).toFile(sortie);
     produits.add(ic.sortie);
     bilan.push({ fichier: ic.sortie, source: fs.statSync(source).size, sortie: info.size, dims: `${info.width}×${info.height}` });
+  }
+
+  // Grain de la page télé : générateur pseudo-aléatoire à graine fixe (fichier stable)
+  {
+    const { fichier, taille, alphaMoyen } = GRAIN;
+    let graine = 0x5c7;
+    // Math.imul : multiplication 32 bits exacte (au-delà, les flottants perdent en précision)
+    const alea = () => ((graine = (Math.imul(graine, 1103515245) + 12345) >>> 0) / 2 ** 32);
+    const px = Buffer.alloc(taille * taille * 4);
+    for (let i = 0; i < taille * taille; i++) {
+      px.fill(255, i * 4, i * 4 + 3);
+      // somme de deux tirages : grain doux, moyenne = alphaMoyen
+      px[i * 4 + 3] = Math.round((alea() + alea()) * alphaMoyen * 255);
+    }
+    const info = await sharp(px, { raw: { width: taille, height: taille, channels: 4 } })
+      .png({ compressionLevel: 9 })
+      .toFile(path.join(SORTIE, fichier));
+    produits.add(fichier);
+    bilan.push({ fichier, source: 0, sortie: info.size, dims: `${info.width}×${info.height}` });
   }
 
   // Photo d'en-tête

@@ -185,7 +185,7 @@ export default function TopNav() {
           {/* Actions */}
           <div className="topnav-actions">
             <a
-              href="http://localhost:5175/vitrine"
+              href="http://localhost:5175/"
               target="_blank"
               rel="noopener noreferrer"
               className="topnav-btn topnav-btn--vitrine"
