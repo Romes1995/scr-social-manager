@@ -7,15 +7,27 @@ const API_BASE = import.meta.env.VITE_API_URL || `http://${window.location.hostn
 const api = axios.create({
   baseURL: API_BASE,
   timeout: 15000,
+  withCredentials: true,   // cookie de session httpOnly posé par /auth/login
 });
 
 api.interceptors.response.use(
   (res) => res,
   (err) => {
     console.error('[API Error]', err.config?.url, err.response?.data || err.message);
+    // Session absente ou expirée → page de connexion, puis retour à la page demandée
+    const surAuth = err.config?.url?.startsWith('/auth/');
+    if (err.response?.status === 401 && !surAuth && window.location.pathname !== '/login') {
+      const suite = encodeURIComponent(window.location.pathname + window.location.search);
+      window.location.href = `/login?suite=${suite}`;
+    }
     return Promise.reject(err);
   }
 );
+
+// --- Auth ---
+export const loginUser  = (data) => api.post('/auth/login', data);
+export const logoutUser = ()     => api.post('/auth/logout');
+export const getMe      = ()     => api.get('/auth/me');
 
 // --- Matches ---
 export const getMatches         = (params) => api.get('/matches', { params });

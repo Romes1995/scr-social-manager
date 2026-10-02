@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { importFFF } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 import './TopNav.css';
 
 const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:3001';
@@ -76,6 +77,12 @@ export default function TopNav() {
   const go = (tabId) => {
     navigate(TAB_PATH[tabId] ?? '/');
     setOpenMenu(null);
+  };
+
+  const { user, logout } = useAuth();
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   const handleImport = async () => {
@@ -194,6 +201,13 @@ export default function TopNav() {
               onClick={() => navigate('/resultats')}
             >
               Publier
+            </button>
+            <button
+              className="topnav-btn topnav-btn--ghost"
+              onClick={handleLogout}
+              title={user ? `Connecté : ${user.username}` : undefined}
+            >
+              Se déconnecter
             </button>
           </div>
         </div>

@@ -523,7 +523,7 @@ export default function HomePage() {
 
   useEffect(() => {
     setMLoading(true);
-    fetch(`${API_BASE}/api/matches?upcoming=true&limit=3`)
+    fetch(`${API_BASE}/api/matches?upcoming=true&limit=3`, { credentials: 'include' })
       .then(r => r.json())
       .then(rows => setMatches(Array.isArray(rows) ? rows : []))
       .catch(() => setMatches([]))

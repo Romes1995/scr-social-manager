@@ -3,6 +3,10 @@ const express = require('express');
 const router  = express.Router();
 const bcrypt  = require('bcryptjs');
 const db      = require('../db');
+const { requireRole } = require('../middleware/auth');
+
+// Gestion des comptes : réservée au rôle admin (la session est déjà exigée sur /api)
+router.use(requireRole(['admin']));
 
 const ROLES = ['admin', 'gestionnaire', 'coach', 'score_live'];
 
