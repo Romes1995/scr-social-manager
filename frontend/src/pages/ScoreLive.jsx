@@ -138,11 +138,11 @@ export default function ScoreLive() {
 
     const upd = (i, status) => setStartSteps(prev => prev.map((s, idx) => idx === i ? { ...s, status } : s));
 
-    try { await publishFacebook({ image_url: absUrl, message: msg, is_story: true }); upd(0, 'done'); }
+    try { await publishFacebook({ image_url: absUrl, message: msg, is_story: true, match_id: selectedMatch.id }); upd(0, 'done'); }
     catch { upd(0, 'error'); }
 
     upd(1, 'loading');
-    try { await publishInstagram({ image_url: absUrl, caption: msg, is_story: true }); upd(1, 'done'); }
+    try { await publishInstagram({ image_url: absUrl, caption: msg, is_story: true, match_id: selectedMatch.id }); upd(1, 'done'); }
     catch { upd(1, 'error'); }
 
     await doStartMatch();
@@ -206,14 +206,14 @@ export default function ScoreLive() {
       // 2. Publication Facebook
       upd(1, 'loading');
       try {
-        await publishFacebook({ image_url: finUrl, message: msg, is_story: true });
+        await publishFacebook({ image_url: finUrl, message: msg, is_story: true, match_id: selectedMatch.id });
         upd(1, 'done');
       } catch { upd(1, 'error'); }
 
       // 3. Publication Instagram
       upd(2, 'loading');
       try {
-        await publishInstagram({ image_url: finUrl, caption: msg, is_story: true });
+        await publishInstagram({ image_url: finUrl, caption: msg, is_story: true, match_id: selectedMatch.id });
         upd(2, 'done');
       } catch { upd(2, 'error'); }
 
@@ -305,11 +305,11 @@ export default function ScoreLive() {
     const msg = `${selectedMatch.equipe} ${selectedMatch.score_scr ?? 0} - ${selectedMatch.score_adv ?? 0} ${selectedMatch.adversaire}`;
     await run(1, () => {
       if (!scoreLiveUrl) throw new Error('Pas d\'image');
-      return publishFacebook({ image_url: scoreLiveUrl, message: msg });
+      return publishFacebook({ image_url: scoreLiveUrl, message: msg, match_id: selectedMatch.id });
     });
     await run(2, () => {
       if (!scoreLiveUrl) throw new Error('Pas d\'image');
-      return publishInstagram({ image_url: scoreLiveUrl, message: msg });
+      return publishInstagram({ image_url: scoreLiveUrl, message: msg, match_id: selectedMatch.id });
     });
   };
 
@@ -351,8 +351,8 @@ export default function ScoreLive() {
     const celebMsg = `But de ${nomComplet} !`;
 
     // Étapes 1-2 : publication vidéo célébration (non bloquant)
-    await run(1, () => publishFacebook({ video_url: videoUrl, message: celebMsg }));
-    await run(2, () => publishInstagram({ video_url: videoUrl, message: celebMsg }));
+    await run(1, () => publishFacebook({ video_url: videoUrl, message: celebMsg, match_id: selectedMatch.id }));
+    await run(2, () => publishInstagram({ video_url: videoUrl, message: celebMsg, match_id: selectedMatch.id }));
 
     // Étape 3 : générer le score live
     let scoreLiveUrl = null;
@@ -381,11 +381,11 @@ export default function ScoreLive() {
     // Étapes 4-5 : publication score live (skip si génération échouée)
     await run(4, () => {
       if (!scoreLiveUrl) throw new Error('Pas d\'image');
-      return publishFacebook({ image_url: scoreLiveUrl, message: storyMsg });
+      return publishFacebook({ image_url: scoreLiveUrl, message: storyMsg, match_id: selectedMatch.id });
     });
     await run(5, () => {
       if (!scoreLiveUrl) throw new Error('Pas d\'image');
-      return publishInstagram({ image_url: scoreLiveUrl, message: storyMsg });
+      return publishInstagram({ image_url: scoreLiveUrl, message: storyMsg, match_id: selectedMatch.id });
     });
   };
 

@@ -146,6 +146,7 @@ export const publishFacebook = (data) => api.post('/publish/facebook', data);
 export const publishInstagram = (data) => api.post('/publish/instagram', data);
 export const publishBoth = (data) => api.post('/publish/both', data);
 export const getPublications = () => api.get('/publish/programmes');
+export const getPublicationsHistorique = (params) => api.get('/publish/historique', { params });
 
 // --- Public (pas de token requis) ---
 export const getClassementParEquipe = (params) => api.get('/public/classement-par-equipe', { params });

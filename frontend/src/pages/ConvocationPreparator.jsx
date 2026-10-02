@@ -99,7 +99,11 @@ export default function ConvocationPreparator() {
     setPublishingVisual(platform);
     try {
       const fn = platform === 'facebook' ? publishFacebook : publishInstagram;
-      await fn({ image_url: visual.full_url, message: `Convocation - ${selectedMatch?.adversaire || ''}` });
+      await fn({
+        image_url: visual.full_url,
+        message: `Convocation - ${selectedMatch?.adversaire || ''}`,
+        match_id: selectedMatch?.id ?? null,
+      });
     } catch (err) {
       setError(err.response?.data?.error || `Erreur publication ${platform}`);
     } finally {

@@ -134,7 +134,12 @@ export default function Programme() {
     setPublishing(match.id);
     try {
       const res = await publishBoth({ match_id: match.id });
-      showAlert('success', res.data.message || 'Publication simulée avec succès');
+      const { facebook, instagram } = res.data;
+      const parts = [
+        facebook  && `Facebook : ${facebook.success  ? (facebook.message  || facebook.status)  : `échec — ${facebook.error}`}`,
+        instagram && `Instagram : ${instagram.success ? (instagram.message || instagram.status) : `échec — ${instagram.error}`}`,
+      ].filter(Boolean).join(' / ');
+      showAlert(res.data.success ? 'success' : 'error', parts || 'Publication effectuée');
     } catch {
       showAlert('error', 'Erreur lors de la publication');
     } finally {
