@@ -3,6 +3,7 @@ import {
   getClubs, createClub, updateClub, deleteClub,
   getJoueurs, createJoueur, updateJoueur, deleteJoueur,
   uploadClubLogo, uploadScrLogo, uploadScrLogoMono, bulkUploadLogos, saveLogoAssociations,
+  getLogosTemporaires, createLogoTemporaire, updateLogoTemporaire, deleteLogoTemporaire, toggleLogoTemporaire,
   previewExcel, confirmImportJoueurs, uploadCelebrationVideo,
   getScoreLiveTemplateStatus, getResultatsTemplateStatus,
   uploadScoreLiveTemplate, uploadResultatTemplate,
@@ -244,6 +245,8 @@ export default function Listes() {
 
       <ScrLogoSection />
 
+      <LogosTemporairesSection />
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         <button className={`btn ${activeTab === 'clubs'   ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('clubs')}>
           Clubs adversaires
@@ -361,6 +364,333 @@ function ScrLogoSection() {
 
       </div>
       {msg && <p style={{ margin: '0 20px 12px', fontSize: 13, color: msg.type === 'success' ? '#1a6b3c' : '#c0392b' }}>{msg.text}</p>}
+    </div>
+  );
+}
+
+// ─── Logos temporaires (Octobre Rose, Movember…) ─────────────────────────────
+
+const STATUT_TEMP = {
+  en_cours: { label: 'En cours', bg: '#fce7f3', color: '#be185d' },
+  a_venir:  { label: 'À venir',  bg: 'var(--bleu-light)', color: 'var(--bleu)' },
+  termine:  { label: 'Terminé',  bg: '#f0f2f5', color: '#888' },
+};
+
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function statutTemp(row, today) {
+  const debut = String(row.date_debut).slice(0, 10);
+  const fin   = String(row.date_fin).slice(0, 10);
+  if (fin < today)   return 'termine';
+  if (debut > today) return 'a_venir';
+  return 'en_cours';
+}
+
+function fmtDateFr(d) {
+  const [y, m, j] = String(d || '').slice(0, 10).split('-');
+  return y ? `${j}/${m}/${y}` : '';
+}
+
+const EMPTY_TEMP_FORM = { clubId: 'SCR', clubIds: ['SCR'], nom: '', debut: '', fin: '' };
+
+function LogosTemporairesSection() {
+  const [rows, setRows]       = useState([]);
+  const [clubs, setClubs]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [alert, setAlert]     = useState(null);
+  const [form, setForm]       = useState(EMPTY_TEMP_FORM);
+  const [multi, setMulti]     = useState(false);
+  const [file, setFile]       = useState(null);
+  const [saving, setSaving]   = useState(false);
+  const [editing, setEditing] = useState(null); // ligne en cours de modification
+  const fileRef = useRef(null);
+
+  const showAlert = (type, msg) => { setAlert({ type, msg }); setTimeout(() => setAlert(null), 5000); };
+
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [r, c] = await Promise.all([getLogosTemporaires(), getClubs()]);
+      setRows(r.data);
+      setClubs(c.data);
+    } catch { showAlert('error', 'Erreur lors du chargement des logos temporaires'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Un choix par club (toutes les équipes d'un même club partagent le logo) — SCR en premier
+  const clubOptions = useMemo(() => {
+    const map = {};
+    clubs.forEach(c => {
+      const key = c.nom.trim().toLowerCase();
+      if (!map[key] || c.id < map[key].id) map[key] = { id: c.id, nom: c.nom };
+    });
+    const list = Object.values(map).sort((a, b) => a.nom.localeCompare(b.nom));
+    return [{ id: 'SCR', nom: 'SC Roeschwoog (SCR)' }, ...list];
+  }, [clubs]);
+
+  const imgSrc = (url) => (url ? `${API_BASE_URL}${url}` : null);
+
+  const toggleClubInMulti = (id) => {
+    setForm(f => ({
+      ...f,
+      clubIds: f.clubIds.includes(id) ? f.clubIds.filter(x => x !== id) : [...f.clubIds, id],
+    }));
+  };
+
+  const validate = (f, needFile) => {
+    if (!f.nom.trim())              return 'Le nom de l\'événement est requis';
+    if (!f.debut || !f.fin)         return 'Dates de début et de fin requises';
+    if (f.fin < f.debut)            return 'La date de fin doit être après la date de début';
+    if (needFile && !file)          return 'Choisissez un fichier PNG';
+    return null;
+  };
+
+  const handleCreate = async () => {
+    const err = validate(form, true) || (multi && form.clubIds.length === 0 ? 'Sélectionnez au moins un club' : null);
+    if (err) return showAlert('error', err);
+    const fd = new FormData();
+    fd.append('logo', file);
+    fd.append('club_ids', JSON.stringify(multi ? form.clubIds : [form.clubId]));
+    fd.append('nom_evenement', form.nom.trim());
+    fd.append('date_debut', form.debut);
+    fd.append('date_fin', form.fin);
+    setSaving(true);
+    try {
+      const r = await createLogoTemporaire(fd);
+      const n = r.data.created?.length || 1;
+      showAlert('success', n > 1 ? `Logo temporaire ajouté pour ${n} clubs` : 'Logo temporaire ajouté');
+      setForm(EMPTY_TEMP_FORM);
+      setFile(null);
+      if (fileRef.current) fileRef.current.value = '';
+      load();
+    } catch (e) { showAlert('error', e.response?.data?.error || 'Erreur lors de l\'ajout'); }
+    finally { setSaving(false); }
+  };
+
+  const handleToggle = async (row) => {
+    try { await toggleLogoTemporaire(row.id); load(); }
+    catch { showAlert('error', 'Erreur lors du changement d\'état'); }
+  };
+
+  const handleDelete = async (row) => {
+    const club = row.club_id ? row.club_nom : 'SCR';
+    if (!confirm(`Supprimer le logo temporaire "${row.nom_evenement}" (${club}) ?`)) return;
+    try { await deleteLogoTemporaire(row.id); showAlert('success', 'Logo temporaire supprimé'); load(); }
+    catch { showAlert('error', 'Erreur lors de la suppression'); }
+  };
+
+  const today = todayIso();
+
+  return (
+    <div className="card" style={{ marginBottom: 20 }}>
+      <div className="card-header">
+        <h2>Logos temporaires</h2>
+        <span style={{ fontSize: 13, color: '#888' }}>Remplacent le logo normal pour les matchs compris dans la période (Octobre Rose, Movember…)</span>
+      </div>
+
+      {alert && (
+        <div className={`alert alert-${alert.type}`} style={{ margin: '12px 20px 0' }}>
+          {alert.type === 'success' ? '✅' : '❌'} {alert.msg}
+        </div>
+      )}
+
+      {/* ── Formulaire d'ajout ── */}
+      <div style={{ padding: '16px 20px', borderBottom: '1px solid #eee' }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div className="form-group" style={{ margin: 0, minWidth: 220 }}>
+            <label className="form-label">
+              Club{multi ? 's' : ''}{' '}
+              <button type="button" className="btn btn-sm btn-ghost" style={{ fontSize: 12, padding: '0 6px', marginLeft: 4 }}
+                onClick={() => setMulti(v => !v)}>
+                {multi ? '↩ Un seul club' : '➕ Appliquer à plusieurs clubs'}
+              </button>
+            </label>
+            {!multi && (
+              <select className="form-control" value={form.clubId} onChange={e => setForm(f => ({ ...f, clubId: e.target.value }))}>
+                {clubOptions.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
+              </select>
+            )}
+          </div>
+          <div className="form-group" style={{ margin: 0, minWidth: 180 }}>
+            <label className="form-label">Événement *</label>
+            <input className="form-control" value={form.nom} placeholder="Ex: Octobre Rose"
+              onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} />
+          </div>
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Du *</label>
+            <input type="date" className="form-control" value={form.debut}
+              onChange={e => setForm(f => ({ ...f, debut: e.target.value, fin: f.fin && f.fin < e.target.value ? e.target.value : f.fin }))} />
+          </div>
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Au *</label>
+            <input type="date" className="form-control" value={form.fin} min={form.debut || undefined}
+              onChange={e => setForm(f => ({ ...f, fin: e.target.value }))} />
+          </div>
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Logo PNG *</label>
+            <input type="file" accept=".png,image/png" ref={fileRef} className="form-control"
+              onChange={e => setFile(e.target.files?.[0] || null)} />
+          </div>
+          <button className="btn btn-primary" onClick={handleCreate} disabled={saving}>
+            {saving ? '⏳...' : '+ Ajouter'}
+          </button>
+        </div>
+
+        {multi && (
+          <div style={{ marginTop: 12, maxHeight: 180, overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 8, padding: 10,
+                        display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 4 }}>
+            {clubOptions.map(o => (
+              <label key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                <input type="checkbox" checked={form.clubIds.includes(o.id)} onChange={() => toggleClubInMulti(o.id)} />
+                {o.nom}
+              </label>
+            ))}
+          </div>
+        )}
+        {multi && <p style={{ fontSize: 12, color: '#888', margin: '6px 0 0' }}>{form.clubIds.length} club(s) sélectionné(s) — le même logo et la même période seront créés pour chacun.</p>}
+      </div>
+
+      {/* ── Liste ── */}
+      {loading ? (
+        <div className="loading-center"><div className="spinner"></div></div>
+      ) : rows.length === 0 ? (
+        <p style={{ padding: '16px 20px', margin: 0, color: '#888', fontSize: 14 }}>Aucun logo temporaire pour le moment.</p>
+      ) : (
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Club</th>
+                <th style={{ width: 110 }}>Logos</th>
+                <th>Événement</th>
+                <th>Période</th>
+                <th>Statut</th>
+                <th>Actif</th>
+                <th style={{ width: 150 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(row => {
+                const st = STATUT_TEMP[statutTemp(row, today)];
+                return (
+                  <tr key={row.id} style={{ opacity: row.actif ? 1 : 0.5 }}>
+                    <td><strong>{row.club_id ? row.club_nom : 'SCR'}</strong></td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <LogoThumb src={imgSrc(row.logo_defaut)} label="Logo normal" />
+                        <span style={{ color: '#aaa', fontSize: 12 }}>→</span>
+                        <LogoThumb src={imgSrc(row.fichier)} label={`Logo ${row.nom_evenement}`} />
+                      </div>
+                    </td>
+                    <td>{row.nom_evenement}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{fmtDateFr(row.date_debut)} → {fmtDateFr(row.date_fin)}</td>
+                    <td><span className="badge" style={{ background: st.bg, color: st.color }}>{st.label}</span></td>
+                    <td>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 13 }}>
+                        <input type="checkbox" checked={!!row.actif} onChange={() => handleToggle(row)} />
+                        {row.actif ? 'Oui' : 'Non'}
+                      </label>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <button className="btn btn-sm btn-ghost" onClick={() => setEditing(row)}>Modifier</button>
+                        <button className="btn btn-sm btn-danger" onClick={() => handleDelete(row)}>Supprimer</button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editing && (
+        <EditLogoTemporaireModal
+          row={editing}
+          clubOptions={clubOptions}
+          onClose={() => setEditing(null)}
+          onSaved={() => { setEditing(null); showAlert('success', 'Logo temporaire modifié'); load(); }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditLogoTemporaireModal({ row, clubOptions, onClose, onSaved }) {
+  const [form, setForm]     = useState({
+    clubId: row.club_id ?? 'SCR',
+    nom:    row.nom_evenement,
+    debut:  String(row.date_debut).slice(0, 10),
+    fin:    String(row.date_fin).slice(0, 10),
+  });
+  const [file, setFile]     = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState(null);
+
+  const handleSave = async () => {
+    if (!form.nom.trim())       return setError('Le nom de l\'événement est requis');
+    if (!form.debut || !form.fin) return setError('Dates requises');
+    if (form.fin < form.debut)  return setError('La date de fin doit être après la date de début');
+    const fd = new FormData();
+    if (file) fd.append('logo', file);
+    fd.append('club_id', String(form.clubId));
+    fd.append('nom_evenement', form.nom.trim());
+    fd.append('date_debut', form.debut);
+    fd.append('date_fin', form.fin);
+    setSaving(true);
+    try { await updateLogoTemporaire(row.id, fd); onSaved(); }
+    catch (e) { setError(e.response?.data?.error || 'Erreur lors de la modification'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <h3>Modifier le logo temporaire</h3>
+          <button className="btn-icon" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-group">
+            <label className="form-label">Club</label>
+            <select className="form-control" value={form.clubId} onChange={e => setForm(f => ({ ...f, clubId: e.target.value }))}>
+              {clubOptions.map(o => <option key={o.id} value={o.id}>{o.nom}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Événement *</label>
+            <input className="form-control" value={form.nom} onChange={e => setForm(f => ({ ...f, nom: e.target.value }))} />
+          </div>
+          <div className="grid-2">
+            <div className="form-group">
+              <label className="form-label">Du *</label>
+              <input type="date" className="form-control" value={form.debut} onChange={e => setForm(f => ({ ...f, debut: e.target.value }))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Au *</label>
+              <input type="date" className="form-control" value={form.fin} min={form.debut || undefined} onChange={e => setForm(f => ({ ...f, fin: e.target.value }))} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Remplacer le logo <span style={{ fontWeight: 400, color: '#888' }}>(optionnel, PNG)</span></label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <LogoThumb src={`${API_BASE_URL}${row.fichier}`} label="Logo actuel" />
+              <input type="file" accept=".png,image/png" className="form-control" onChange={e => setFile(e.target.files?.[0] || null)} />
+            </div>
+          </div>
+          {error && <p style={{ color: '#c0392b', fontSize: 13, margin: 0 }}>❌ {error}</p>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Annuler</button>
+          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>{saving ? '⏳...' : '✔ Enregistrer'}</button>
+        </div>
+      </div>
     </div>
   );
 }

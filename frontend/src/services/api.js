@@ -112,6 +112,17 @@ export const bulkUploadLogos = (formData) => api.post('/clubs/bulk-upload', form
 });
 export const saveLogoAssociations = (associations) => api.post('/clubs/save-logo-associations', { associations });
 
+// --- Logos temporaires (Octobre Rose, Movember…) ---
+export const getLogosTemporaires   = ()             => api.get('/logos-temporaires');
+export const createLogoTemporaire  = (formData)     => api.post('/logos-temporaires', formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const updateLogoTemporaire  = (id, formData) => api.put(`/logos-temporaires/${id}`, formData, {
+  headers: { 'Content-Type': 'multipart/form-data' },
+});
+export const deleteLogoTemporaire  = (id)           => api.delete(`/logos-temporaires/${id}`);
+export const toggleLogoTemporaire  = (id)           => api.patch(`/logos-temporaires/${id}/toggle`);
+
 // --- Joueurs Excel ---
 export const previewExcel = (formData) => api.post('/joueurs/preview-excel', formData, {
   headers: { 'Content-Type': 'multipart/form-data' },

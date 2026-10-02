@@ -59,6 +59,7 @@ app.use('/api/public',     require('./routes/public'));
 app.use('/api/fff',        require('./routes/fff'));
 app.use('/api/matches',    require('./routes/matches'));
 app.use('/api/clubs',      require('./routes/clubs'));
+app.use('/api/logos-temporaires', require('./routes/logosTemporaires'));
 app.use('/api/joueurs',    require('./routes/joueurs'));
 app.use('/api/templates',  require('./routes/templates'));
 app.use('/api/publish',    require('./routes/publish'));
