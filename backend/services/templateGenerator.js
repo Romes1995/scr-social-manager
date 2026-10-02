@@ -13,12 +13,12 @@ const sharp = require('sharp');
 const path  = require('path');
 const fs    = require('fs');
 const pool  = require('../db');
+const { resolveLogo, resolveLogoAdversaire } = require('../utils/resolveLogo');
 
 const BACKEND    = path.join(__dirname, '..');
 const LOGOS_DIR  = path.join(BACKEND, 'uploads', 'logos');
 const GENERATED  = path.join(BACKEND, 'uploads', 'generated');
 const BEBAS_FONT = path.join(BACKEND, 'fonts', 'BebasNeue-Regular.ttf');
-const SCR_LOGO   = path.join(LOGOS_DIR, 'scr.png');
 
 // ── Formatage ──────────────────────────────────────────────────────────────────
 
@@ -230,9 +230,9 @@ async function generateFromTemplate(templateId, matchId, textesFixe = {}) {
     }
   }
 
-  const scrPath      = fs.existsSync(SCR_LOGO) ? SCR_LOGO : null;
+  const scrPath      = await resolveLogo('SCR', match.date);
   const advNorm      = normalizeClubName(match.adversaire);
-  const advLocalPath = clubLogoMap.get(advNorm) || null;
+  const advLocalPath = await resolveLogoAdversaire(match.adversaire, match.date, clubLogoMap.get(advNorm) || null);
   const advCdnUrl    = match.logo_adversaire || null;
 
   // ── 4. Traitement des zones ───────────────────────────────────────────────────

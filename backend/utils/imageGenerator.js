@@ -11,13 +11,12 @@ const sharp = require('sharp');
 const path  = require('path');
 const fs    = require('fs');
 const pool  = require('../db');
+const { resolveLogo, resolveLogoAdversaire } = require('./resolveLogo');
 
 const UPLOADS    = path.join(__dirname, '..', 'uploads');
 const LOGOS_DIR  = path.join(UPLOADS, 'logos');
 const TEMPLATES  = path.join(UPLOADS, 'templates');
 const GENERATED  = path.join(UPLOADS, 'generated');
-const LOGO_SCR      = path.join(LOGOS_DIR, 'scr.png');
-const LOGO_SCR_MONO = path.join(LOGOS_DIR, 'scr_monochrome.png');
 const BEBAS_FONT = path.join(__dirname, '..', 'fonts', 'BebasNeue-Regular.ttf');
 
 // ─── Police Bebas Neue — chemin file:// (librsvg évite les data-URI > 50 Ko) ──
@@ -241,9 +240,9 @@ async function renderFormat({ tpl, out, W, H, Y_MAP, CFG, sorted, n, logos }) {
 
     const scrOnLeft = m.domicile !== false;
     const advNorm   = normalizeClubName(m.adversaire);
-    const advPath   = logos.color.get(advNorm) || null;
+    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, logos.color.get(advNorm) || null);
 
-    const scrBuf = await loadLogoBuf(fs.existsSync(LOGO_SCR) ? LOGO_SCR : null, logoSize);
+    const scrBuf = await loadLogoBuf(await resolveLogo('SCR', m.date), logoSize);
     const advBuf = await loadLogoBuf(advPath, logoSize);
 
     const leftBuf  = scrOnLeft ? scrBuf  : advBuf;
@@ -300,9 +299,9 @@ async function renderFormatTV({ tpl, out, sorted, n, logos }) {
 
     const scrOnLeft = m.domicile !== false;
     const advNorm   = normalizeClubName(m.adversaire);
-    const advPath   = logos.color.get(advNorm) || null;
+    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, logos.color.get(advNorm) || null);
 
-    const scrBuf = await loadLogoBuf(fs.existsSync(LOGO_SCR) ? LOGO_SCR : null, logoSize);
+    const scrBuf = await loadLogoBuf(await resolveLogo('SCR', m.date), logoSize);
     const advBuf = await loadLogoBuf(advPath, logoSize);
 
     const leftBuf  = scrOnLeft ? scrBuf  : advBuf;
@@ -473,11 +472,10 @@ async function generateScoreLive(matchId, matchData = null, finDeMatch = false) 
   const logos     = await loadClubLogosFromDB();
   const scrOnLeft = match.domicile !== false;
   const advNorm   = normalizeClubName(match.adversaire);
-  const advPath   = logos.mono.get(advNorm) || logos.color.get(advNorm) || null;
-  const scrPath   = fs.existsSync(LOGO_SCR_MONO) ? LOGO_SCR_MONO
-                  : fs.existsSync(LOGO_SCR)      ? LOGO_SCR
-                  : null;
-  console.log(`[scoreLive] logo SCR : ${scrPath || 'absent'}${fs.existsSync(LOGO_SCR_MONO) ? ' (monochrome)' : ''} | logo adv ("${advNorm}") : ${advPath || 'aucun'}`);
+  const advPath   = await resolveLogoAdversaire(match.adversaire, match.date,
+                      logos.mono.get(advNorm) || logos.color.get(advNorm) || null);
+  const scrPath   = await resolveLogo('SCR', match.date, { mono: true });
+  console.log(`[scoreLive] logo SCR : ${scrPath || 'absent'} | logo adv ("${advNorm}") : ${advPath || 'aucun'}`);
 
   const LEFT_SIZE  = 390;
   const RIGHT_SIZE = 390;
@@ -620,8 +618,8 @@ async function generateResultats(matchs) {
 
     // Résolution logos
     const advNorm   = normalizeClubName(m.adversaire);
-    const advPath   = logos.color.get(advNorm) || null;
-    const scrPath   = fs.existsSync(LOGO_SCR) ? LOGO_SCR : null;
+    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, logos.color.get(advNorm) || null);
+    const scrPath   = await resolveLogo('SCR', m.date);
 
     const leftBufRaw  = scrOnLeft
       ? await loadLogoBuf(scrPath, c.lgSz)
@@ -741,8 +739,9 @@ async function generateMatchDay(matchId, teamNumber = 1, matchData = null) {
   const logos     = await loadClubLogosFromDB();
   const scrOnLeft = match.domicile !== false; // true = SCR est domicile (gauche)
   const advNorm   = normalizeClubName(match.adversaire);
-  const advPath   = logos.color.get(advNorm) || logos.mono.get(advNorm) || null;
-  const scrPath   = fs.existsSync(LOGO_SCR) ? LOGO_SCR : null;
+  const advPath   = await resolveLogoAdversaire(match.adversaire, match.date,
+                      logos.color.get(advNorm) || logos.mono.get(advNorm) || null);
+  const scrPath   = await resolveLogo('SCR', match.date);
   console.log(`[matchDay] logo SCR : ${scrPath || 'absent'} | logo adv ("${advNorm}") : ${advPath || 'aucun'}`);
 
   const LOGO_SIZE = 220;

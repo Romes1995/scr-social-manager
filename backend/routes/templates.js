@@ -494,9 +494,8 @@ router.post('/generate-resultat-weekend', async (req, res) => {
     }
 
     const { generateResultat } = require('../services/generateResultat');
+    const { resolveLogo, resolveLogoAdversaire } = require('../utils/resolveLogo');
     const BACKEND   = path.join(__dirname, '..');
-    const LOGOS_DIR = path.join(BACKEND, 'uploads', 'logos');
-    const LOGO_SCR  = path.join(LOGOS_DIR, 'scr.png');
 
     // Charger les matchs depuis la DB (ordre par équipe SCR)
     const { rows: matchesDB } = await pool.query(
@@ -599,9 +598,12 @@ router.post('/generate-resultat-weekend', async (req, res) => {
         }
       }
 
+      // Logo temporaire (Octobre Rose…) prioritaire si actif à la date du match
+      advLogoPath = await resolveLogoAdversaire(m.adversaire, m.date, advLogoPath);
+
       // domicile=true → SCR à gauche ; domicile=false → SCR à droite
       const scrOnLeft = m.domicile !== false;
-      const scrLogo   = fs.existsSync(LOGO_SCR) ? LOGO_SCR : null;
+      const scrLogo   = await resolveLogo('SCR', m.date);
       const scrNom    = (m.equipe     || 'SCR').toUpperCase();
       const advNom    = (m.adversaire || '').toUpperCase();
       const score     = scrOnLeft

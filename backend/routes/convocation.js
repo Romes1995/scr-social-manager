@@ -3,6 +3,7 @@ const router  = express.Router();
 const pool    = require('../db');
 const path    = require('path');
 const { generateConvocationVisual } = require('../services/convocationVisualService');
+const { resolveLogo, resolveLogoAdversaire } = require('../utils/resolveLogo');
 
 // GET /api/convocation/matches-weekend
 // Retourne les 10 prochains matchs à venir. Si aucun, retourne les 5 derniers matchs passés.
@@ -147,8 +148,11 @@ router.post('/generate-visual', async (req, res) => {
     );
     const localClubLogo = clubRows[0]?.logo_url || null;
     const matchLogo     = match.logo_adversaire;
-    const advLogo = localClubLogo
+    const advLogoDefaut = localClubLogo
       || (matchLogo && !matchLogo.startsWith('http') ? matchLogo : null);
+    // Logo temporaire (Octobre Rose…) prioritaire si actif à la date du match
+    const advLogo = await resolveLogoAdversaire(match.adversaire, match.date, advLogoDefaut);
+    const scrLogo = await resolveLogo('SCR', match.date);
     console.log(`[convocation] logo adversaire "${match.adversaire}": local=${localClubLogo} match=${matchLogo} → utilisé=${advLogo}`);
 
     const visualUrl = await generateConvocationVisual({
@@ -159,6 +163,7 @@ router.post('/generate-visual', async (req, res) => {
         nom:  match.adversaire,
         logo: advLogo,
       },
+      scrLogo,
       heureMatch: custom_match_time || match.heure || '',
       rdvStade:   rdv_stade   || '',
       rdvLaBas:   rdv_la_bas  || null,
