@@ -14,7 +14,12 @@ CREATE TABLE IF NOT EXISTS clubs (
   nom_fff VARCHAR(100),                         -- short_name FFF, tenu à jour par l'import
   nom_affiche VARCHAR(100),                     -- saisi dans l'admin (/clubs), prioritaire
   nom_court VARCHAR(40),                        -- affichages étroits
-  CONSTRAINT clubs_fff_cl_no_key UNIQUE (fff_cl_no)
+  -- Dossier Google Drive des logos (migrations/006_logos_drive.sql)
+  drive_folder_id VARCHAR(100),                 -- lien permanent (renommage sans effet)
+  drive_folder_nom VARCHAR(200),                -- nom lors de la dernière synchro
+  drive_folder_manuel BOOLEAN NOT NULL DEFAULT false,  -- choisi dans l'admin : jamais remplacé
+  CONSTRAINT clubs_fff_cl_no_key UNIQUE (fff_cl_no),
+  CONSTRAINT clubs_drive_folder_id_key UNIQUE (drive_folder_id)
 );
 
 CREATE TABLE IF NOT EXISTS joueurs (
@@ -163,6 +168,7 @@ CREATE TABLE IF NOT EXISTS publications_historique (
   CONSTRAINT hist_statut_check   CHECK (statut IN ('publie', 'erreur', 'mock', 'test'))
 );
 
+CREATE TYPE logo_variante AS ENUM ('classique', 'octobre_rose', 'monochrome');
 CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live');
 
 CREATE TABLE IF NOT EXISTS users (
@@ -202,3 +208,46 @@ CREATE TABLE IF NOT EXISTS logos_temporaires (
 );
 CREATE INDEX IF NOT EXISTS idx_logos_temp_club  ON logos_temporaires(club_id);
 CREATE INDEX IF NOT EXISTS idx_logos_temp_dates ON logos_temporaires(date_debut, date_fin);
+
+-- Alias des clubs fusionnés (migrations/005_club_aliases.sql) — services/clubsFusion.js
+CREATE TABLE IF NOT EXISTS club_aliases (
+  id         SERIAL PRIMARY KEY,
+  club_id    INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  alias      VARCHAR(100) NOT NULL,                -- ancien nom d'un club absorbé
+  fff_cl_no  INTEGER,                              -- cl_no FFF d'un absorbé (≠ celui du conservé)
+  created_at TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT club_aliases_alias_key     UNIQUE (alias),
+  CONSTRAINT club_aliases_fff_cl_no_key UNIQUE (fff_cl_no)
+);
+CREATE INDEX IF NOT EXISTS idx_club_aliases_club ON club_aliases(club_id);
+
+-- Logos synchronisés depuis Google Drive (migrations/006_logos_drive.sql) — services/driveLogos.js
+-- Complètent les logos existants (clubs.logo_url…) sans les remplacer ; lus par utils/logoClub.js
+CREATE TABLE IF NOT EXISTS club_logos (
+  id                  SERIAL PRIMARY KEY,
+  club_id             INTEGER NOT NULL REFERENCES clubs(id) ON DELETE CASCADE,
+  variante            logo_variante NOT NULL,
+  fichier_local       TEXT NOT NULL,                 -- /uploads/logos/<club_id>/<variante>.png
+  drive_file_id       VARCHAR(100) NOT NULL,
+  drive_file_nom      VARCHAR(300),
+  drive_modified_time TIMESTAMPTZ,
+  variante_manuelle   BOOLEAN NOT NULL DEFAULT false,  -- corrigée dans l'admin
+  created_at          TIMESTAMP DEFAULT NOW(),
+  updated_at          TIMESTAMP DEFAULT NOW(),
+  CONSTRAINT club_logos_club_variante_key UNIQUE (club_id, variante)
+);
+CREATE INDEX IF NOT EXISTS idx_club_logos_drive_file ON club_logos(drive_file_id);
+
+-- Dossiers Drive écartés dans l'admin (plus proposés par la synchro)
+CREATE TABLE IF NOT EXISTS drive_dossiers_ignores (
+  folder_id  VARCHAR(100) PRIMARY KEY,
+  nom        VARCHAR(200),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Réglages globaux (variante_logo_active : classique | octobre_rose)
+CREATE TABLE IF NOT EXISTS reglages (
+  cle        VARCHAR(50) PRIMARY KEY,
+  valeur     TEXT NOT NULL,
+  updated_at TIMESTAMP DEFAULT NOW()
+);

@@ -12,6 +12,7 @@ const path  = require('path');
 const fs    = require('fs');
 const pool  = require('../db');
 const { resolveLogo, resolveLogoAdversaire } = require('./resolveLogo');
+const { getLogoAdversaire } = require('./logoClub');
 
 const UPLOADS    = path.join(__dirname, '..', 'uploads');
 const LOGOS_DIR  = path.join(UPLOADS, 'logos');
@@ -117,31 +118,7 @@ function sortByTeamNumber(matchs) {
   });
 }
 
-// ─── Chargement logos ─────────────────────────────────────────────────────────
-
-async function loadClubLogosFromDB() {
-  try {
-    const r = await pool.query(
-      'SELECT nom, equipe, logo_url, logo_monochrome_url FROM clubs WHERE logo_url IS NOT NULL OR logo_monochrome_url IS NOT NULL'
-    );
-    const color = new Map(), mono = new Map();
-    for (const row of r.rows) {
-      // Indexer par nom normalisé ET par equipe normalisée (couvre "AS Gambsheim 2" → même logo)
-      const keys = [normalizeClubName(row.nom)];
-      if (row.equipe) keys.push(normalizeClubName(row.equipe));
-      for (const key of keys) {
-        if (row.logo_url && !color.has(key))            color.set(key, logoUrlToPath(row.logo_url));
-        if (row.logo_monochrome_url && !mono.has(key))  mono.set(key, logoUrlToPath(row.logo_monochrome_url));
-      }
-    }
-    return { color, mono };
-  } catch { return { color: new Map(), mono: new Map() }; }
-}
-
-function logoUrlToPath(url) {
-  if (!url || !url.startsWith('/uploads/')) return null;
-  return path.join(__dirname, '..', url);
-}
+// ─── Chargement logos (adversaire : utils/logoClub.js) ───────────────────────
 
 /**
  * Charge un logo PNG en buffer, redimensionné à size×size (fit:contain, fond transparent).
@@ -225,7 +202,7 @@ function svgText(x, y, fontSize, weight, color, content, fontFamily = 'Arial, He
 
 // ─── Rendu d'un format (PROGRAMME) ───────────────────────────────────────────
 
-async function renderFormat({ tpl, out, W, H, Y_MAP, CFG, sorted, n, logos }) {
+async function renderFormat({ tpl, out, W, H, Y_MAP, CFG, sorted, n }) {
   const { logoSize, logoLeftCx, logoRightCx,
           teamLeftCx, teamRightCx, teamFontSize,
           dateOffsetY, dateFontSize, dateCx, dateColor, teamColor } = CFG;
@@ -239,8 +216,7 @@ async function renderFormat({ tpl, out, W, H, Y_MAP, CFG, sorted, n, logos }) {
     const top = Math.round(cy - logoR);
 
     const scrOnLeft = m.domicile !== false;
-    const advNorm   = normalizeClubName(m.adversaire);
-    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, logos.color.get(advNorm) || null);
+    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, await getLogoAdversaire(m));
 
     const scrBuf = await loadLogoBuf(await resolveLogo('SCR', m.date), logoSize);
     const advBuf = await loadLogoBuf(advPath, logoSize);
@@ -281,7 +257,7 @@ async function renderFormat({ tpl, out, W, H, Y_MAP, CFG, sorted, n, logos }) {
 //
 // Diffère de renderFormat() par la mise en page date/heure : 2 lignes centrées
 // autour de cy (au lieu d'1 ligne sous le nom), donc pas de réutilisation directe.
-async function renderFormatTV({ tpl, out, sorted, n, logos }) {
+async function renderFormatTV({ tpl, out, sorted, n }) {
   const W = 1280, H = 720;
   const { logoSize, logoLeftCx, logoRightCx,
           teamLeftCx, teamRightCx, teamFontSize,
@@ -298,8 +274,7 @@ async function renderFormatTV({ tpl, out, sorted, n, logos }) {
     const top = Math.round(cy - logoR);
 
     const scrOnLeft = m.domicile !== false;
-    const advNorm   = normalizeClubName(m.adversaire);
-    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, logos.color.get(advNorm) || null);
+    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, await getLogoAdversaire(m));
 
     const scrBuf = await loadLogoBuf(await resolveLogo('SCR', m.date), logoSize);
     const advBuf = await loadLogoBuf(advPath, logoSize);
@@ -353,9 +328,8 @@ async function generateProgramme(matchs) {
   if (!fs.existsSync(postTpl))  throw new Error(`Template post introuvable : programme_post_${suffix}.png`);
   if (!fs.existsSync(GENERATED)) fs.mkdirSync(GENERATED, { recursive: true });
 
-  const logos = await loadClubLogosFromDB();
   const ts    = Date.now();
-  const ctx   = { sorted, n, logos };
+  const ctx   = { sorted, n };
 
   const storyOut = path.join(GENERATED, `programme_story_${ts}.png`);
   const postOut  = path.join(GENERATED, `programme_post_${ts}.png`);
@@ -469,11 +443,11 @@ async function generateScoreLive(matchId, matchData = null, finDeMatch = false) 
   console.log(`[scoreLive] police BebasNeue : ${fontOk ? 'OK (' + Math.round(fs.statSync(BEBAS_FONT).size / 1024) + 'KB)' : 'ABSENTE → fallback Arial'}`);
 
   // ── 4. Logos ─────────────────────────────────────────────────────────────────
-  const logos     = await loadClubLogosFromDB();
   const scrOnLeft = match.domicile !== false;
   const advNorm   = normalizeClubName(match.adversaire);
+  // Monochrome, sinon couleur (utils/logoClub.js)
   const advPath   = await resolveLogoAdversaire(match.adversaire, match.date,
-                      logos.mono.get(advNorm) || logos.color.get(advNorm) || null);
+                      await getLogoAdversaire(match, { mono: true }));
   const scrPath   = await resolveLogo('SCR', match.date, { mono: true });
   console.log(`[scoreLive] logo SCR : ${scrPath || 'absent'} | logo adv ("${advNorm}") : ${advPath || 'aucun'}`);
 
@@ -604,7 +578,6 @@ async function generateResultats(matchs) {
   const tpl    = path.join(TEMPLATES, `resultat_${suffix}.png`);
   if (!fs.existsSync(tpl)) throw new Error(`Template résultats introuvable : resultat_${suffix}.png`);
 
-  const logos = await loadClubLogosFromDB();
   const coords = RESULT_COORDS[n];
   const bebas  = 'BebasNeue, Arial';
 
@@ -617,8 +590,7 @@ async function generateResultats(matchs) {
     const scrOnLeft = m.domicile !== false;
 
     // Résolution logos
-    const advNorm   = normalizeClubName(m.adversaire);
-    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, logos.color.get(advNorm) || null);
+    const advPath   = await resolveLogoAdversaire(m.adversaire, m.date, await getLogoAdversaire(m));
     const scrPath   = await resolveLogo('SCR', m.date);
 
     const leftBufRaw  = scrOnLeft
@@ -736,11 +708,11 @@ async function generateMatchDay(matchId, teamNumber = 1, matchData = null) {
   console.log(`[matchDay] template final — ${tplMeta.width}×${tplMeta.height}px`);
 
   // ── 3. Logos ─────────────────────────────────────────────────────────────────
-  const logos     = await loadClubLogosFromDB();
   const scrOnLeft = match.domicile !== false; // true = SCR est domicile (gauche)
   const advNorm   = normalizeClubName(match.adversaire);
+  // Couleur (variante active), sinon monochrome (utils/logoClub.js)
   const advPath   = await resolveLogoAdversaire(match.adversaire, match.date,
-                      logos.color.get(advNorm) || logos.mono.get(advNorm) || null);
+                      (await getLogoAdversaire(match)) || (await getLogoAdversaire(match, { mono: true })));
   const scrPath   = await resolveLogo('SCR', match.date);
   console.log(`[matchDay] logo SCR : ${scrPath || 'absent'} | logo adv ("${advNorm}") : ${advPath || 'aucun'}`);
 

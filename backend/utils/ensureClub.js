@@ -12,6 +12,13 @@ async function ensureAdversaireClub(adversaire) {
   const baseName = numbered ? numbered[1].trim() : full;
 
   try {
+    // Nom d'un club absorbé par une fusion (club_aliases) : rien à créer
+    const alias = await pool.query(
+      'SELECT 1 FROM club_aliases WHERE LOWER(TRIM(alias)) IN (LOWER($1), LOWER($2)) LIMIT 1',
+      [baseName, full]
+    );
+    if (alias.rows.length > 0) return;
+
     // Équipe de base (sans numéro)
     const existBase = await pool.query(
       `SELECT id FROM clubs

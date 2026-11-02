@@ -583,23 +583,10 @@ router.post('/generate-resultat-weekend', async (req, res) => {
 
     // Construire le tableau matches pour generateResultat
     const matches = await Promise.all(matchesDB.map(async (m) => {
-      // Rechercher logo adversaire dans la table clubs (correspondance partielle sur le nom)
-      const advWords = (m.adversaire || '').split(/\s+/);
-      let advLogoPath = null;
-      for (const word of advWords) {
-        if (word.length < 3) continue;
-        const { rows } = await pool.query(
-          "SELECT logo_url FROM clubs WHERE LOWER(nom) LIKE LOWER($1) AND logo_url IS NOT NULL LIMIT 1",
-          [`%${word}%`]
-        );
-        if (rows[0]?.logo_url) {
-          advLogoPath = path.join(BACKEND, rows[0].logo_url);
-          break;
-        }
-      }
-
-      // Logo temporaire (Octobre Rose…) prioritaire si actif à la date du match
-      advLogoPath = await resolveLogoAdversaire(m.adversaire, m.date, advLogoPath);
+      // Logo adversaire (utils/logoClub.js) ; logo temporaire (Octobre Rose…) prioritaire
+      // s'il est actif à la date du match
+      const { getLogoAdversaire } = require('../utils/logoClub');
+      const advLogoPath = await resolveLogoAdversaire(m.adversaire, m.date, await getLogoAdversaire(m));
 
       // domicile=true → SCR à gauche ; domicile=false → SCR à droite
       const scrOnLeft = m.domicile !== false;

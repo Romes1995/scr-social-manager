@@ -66,6 +66,7 @@ app.use('/api/publish',    require('./routes/publish'));
 app.use('/api/convocation',require('./routes/convocation'));
 app.use('/api/users',      require('./routes/users'));
 app.use('/api/admin',      require('./routes/admin'));
+app.use('/api',            require('./routes/logosDrive'));   // /logos/*, /clubs/:id/logos|drive-folder, /club-logos/:id
 
 // ── Handlers génériques ───────────────────────────────────────────────────────
 app.use((req, res) => {

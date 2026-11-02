@@ -353,6 +353,25 @@ async function importFFF({ dryRun = false } = {}) {
     matchs,
   };
 
+  // Clubs issus d'une fusion (club_aliases) : le match prend le nom du club conservé,
+  // comme les matchs existants renommés par la fusion (visuels : logo cherché par nom).
+  // cl_no absorbés (alias) et cl_no du club conservé lui-même.
+  const { rows: clNoFusionnes } = await pool.query(
+    `SELECT a.fff_cl_no, c.nom FROM club_aliases a
+       JOIN clubs c ON c.id = a.club_id
+      WHERE a.fff_cl_no IS NOT NULL
+     UNION
+     SELECT c.fff_cl_no, c.nom FROM clubs c
+      WHERE c.fff_cl_no IS NOT NULL
+        AND EXISTS (SELECT 1 FROM club_aliases a WHERE a.club_id = c.id)`);
+  const nomParClNo = new Map(clNoFusionnes.map(r => [r.fff_cl_no, r.nom]));
+  for (const m of matchs) {
+    const nom = nomParClNo.get(m.adversaire_cl_no);
+    if (!nom || nom === m.adversaire) continue;
+    m.adversaire_noms.push(normalizeName(m.adversaire), normalizeName(nom));
+    m.adversaire = nom;
+  }
+
   for (const m of matchs) {
     const client = await pool.connect();
     try {

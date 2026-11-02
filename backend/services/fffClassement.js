@@ -17,7 +17,7 @@ const club = require('../config/club');
 const {
   getWithRetry, sleep, toTitleCase, normalizeName, DOFA_BASE, DOFA_HEADERS, SCR_CL_NO,
 } = require('./fffImport');
-const { assurerClubs, nomClub, sqlLogoParNom } = require('./clubsFff');
+const { assurerClubs, nomClub, sqlLogoParNom, sqlLogoClub, sqlClubParClNo } = require('./clubsFff');
 
 // ── Saison ────────────────────────────────────────────────────────────────────
 
@@ -244,11 +244,11 @@ async function lireClassements({ equipe = null } = {}) {
     // (clubs, par cl_no puis par nom comme les matchs) ; à défaut, logo FFF stocké.
     `SELECT cl.*,
             CASE WHEN cl.is_scr THEN $3
-                 ELSE COALESCE(ca.logo_url, ${sqlLogoParNom('cl.club')}, cl.logo_url)
+                 ELSE COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('cl.club')}, cl.logo_url)
             END AS logo_affiche,
             ca.nom_affiche AS ca_nom_affiche, ca.nom_court AS ca_nom_court, ca.nom_fff AS ca_nom_fff
        FROM classements cl
-       LEFT JOIN clubs ca ON ca.fff_cl_no = cl.club_cl_no AND NOT cl.is_scr
+       LEFT JOIN clubs ca ON ca.id = ${sqlClubParClNo('cl.club_cl_no')} AND NOT cl.is_scr
       WHERE cl.saison = $1 AND ($2::text IS NULL OR cl.equipe = $2)
       ORDER BY cl.equipe, cl.rang`,
     [saison, equipe, club.logo]

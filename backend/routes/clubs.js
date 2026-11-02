@@ -8,6 +8,7 @@ const { invaliderCache: invaliderCacheAccueil } = require('../services/accueilPu
 const { saisonCourante } = require('../services/fffClassement');
 const { nomClub } = require('../services/clubsFff');
 const { genererMini } = require('../utils/logoMini');
+const { suggererDoublons, previsualiser, fusionner, ErreurFusion } = require('../services/clubsFusion');
 
 // Miniature 64 px pour la vitrine, sans bloquer la réponse
 const miniatureEnFond = (url) =>
@@ -104,6 +105,7 @@ router.get('/', async (req, res) => {
                 FILTER (WHERE r.equipe_no IS NOT NULL)            AS equipes_no
          FROM clubs c
          JOIN rencontres r ON r.cl_no = c.fff_cl_no
+                           OR r.cl_no IN (SELECT a.fff_cl_no FROM club_aliases a WHERE a.club_id = c.id)
         WHERE ($4::boolean IS NOT TRUE OR c.nom_affiche IS NULL)
         GROUP BY c.id
         ORDER BY (c.nom_affiche IS NOT NULL), COALESCE(c.nom_fff, c.nom)`,
@@ -192,6 +194,47 @@ router.post('/save-logo-associations', async (req, res) => {
   }
 
   res.json({ success: true, updated: updated.length, details: updated, errors });
+});
+
+// ─── Fusion des doublons (services/clubsFusion.js) ────────────────────────────
+const erreurFusion = (res, err) => {
+  if (err instanceof ErreurFusion) {
+    return res.status(err.status).json({ error: err.message, ...(err.details ? { preview: err.details } : {}) });
+  }
+  res.status(500).json({ error: err.message });
+};
+
+// GET /api/clubs/doublons — groupes de doublons suggérés
+router.get('/doublons', async (req, res) => {
+  try {
+    res.json(await suggererDoublons());
+  } catch (err) {
+    erreurFusion(res, err);
+  }
+});
+
+// POST /api/clubs/fusion/preview — { club_conserve_id, clubs_absorbes_ids[] } : rien n'est écrit
+router.post('/fusion/preview', async (req, res) => {
+  try {
+    const { club_conserve_id, clubs_absorbes_ids } = req.body || {};
+    res.json(await previsualiser(club_conserve_id, clubs_absorbes_ids));
+  } catch (err) {
+    erreurFusion(res, err);
+  }
+});
+
+// POST /api/clubs/fusion — même corps (+ confirmer_cl_no si des numéros FFF diffèrent)
+// 409 + preview en cas de conflit : rien n'est écrit
+router.post('/fusion', async (req, res) => {
+  try {
+    const { club_conserve_id, clubs_absorbes_ids, confirmer_cl_no } = req.body || {};
+    const bilan = await fusionner(club_conserve_id, clubs_absorbes_ids, { confirmerClNo: confirmer_cl_no === true });
+    if (bilan.resultat.logo_url) miniatureEnFond(bilan.resultat.logo_url);
+    invaliderCacheAccueil();
+    res.json({ success: true, ...bilan });
+  } catch (err) {
+    erreurFusion(res, err);
+  }
 });
 
 // ─── GET /api/clubs/:id ───────────────────────────────────────────────────────

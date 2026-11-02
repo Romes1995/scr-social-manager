@@ -4,6 +4,7 @@ const pool    = require('../db');
 const path    = require('path');
 const { generateConvocationVisual } = require('../services/convocationVisualService');
 const { resolveLogo, resolveLogoAdversaire } = require('../utils/resolveLogo');
+const { getLogoAdversaire } = require('../utils/logoClub');
 
 // GET /api/convocation/matches-weekend
 // Retourne les 10 prochains matchs à venir. Si aucun, retourne les 5 derniers matchs passés.
@@ -140,13 +141,9 @@ router.post('/generate-visual', async (req, res) => {
     const teamNum  = String(match.equipe || '').replace(/\D/g, '') || '1';
     const equipeLabel = `Equipe ${teamNum}`;
 
-    // Logo adversaire : priorité au logo local (table clubs), sinon logo_adversaire du match
+    // Logo adversaire : logo local (utils/logoClub.js), sinon logo_adversaire du match
     // On rejette les URLs CDN externes car le service ne les télécharge plus
-    const { rows: clubRows } = await pool.query(
-      `SELECT logo_url FROM clubs WHERE LOWER(nom) ILIKE $1 AND logo_url IS NOT NULL LIMIT 1`,
-      [`%${(match.adversaire || '').toLowerCase()}%`]
-    );
-    const localClubLogo = clubRows[0]?.logo_url || null;
+    const localClubLogo = await getLogoAdversaire(match);
     const matchLogo     = match.logo_adversaire;
     const advLogoDefaut = localClubLogo
       || (matchLogo && !matchLogo.startsWith('http') ? matchLogo : null);

@@ -14,6 +14,7 @@ const path  = require('path');
 const fs    = require('fs');
 const pool  = require('../db');
 const { resolveLogo, resolveLogoAdversaire } = require('../utils/resolveLogo');
+const { getLogoAdversaire } = require('../utils/logoClub');
 
 const BACKEND    = path.join(__dirname, '..');
 const LOGOS_DIR  = path.join(BACKEND, 'uploads', 'logos');
@@ -41,15 +42,6 @@ function formatHeure(heureStr) {
   if (!heureStr) return '';
   const [h, min] = heureStr.slice(0, 5).split(':');
   return `${h}h${min}`;
-}
-
-function normalizeClubName(name) {
-  return String(name || '')
-    .trim()
-    .replace(/\s+\d+$/, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 function esc(s) {
@@ -218,21 +210,9 @@ async function generateFromTemplate(templateId, matchId, textesFixe = {}) {
   if (matchRow.rows.length === 0) throw new Error('Match non trouvé : id=' + matchId);
   const match = matchRow.rows[0];
 
-  // ── 3. Logos clubs depuis la DB ───────────────────────────────────────────────
-  const clubRows = await pool.query(
-    'SELECT nom, logo_url FROM clubs WHERE logo_url IS NOT NULL'
-  );
-  const clubLogoMap = new Map();
-  for (const row of clubRows.rows) {
-    const key = normalizeClubName(row.nom);
-    if (!clubLogoMap.has(key) && row.logo_url?.startsWith('/uploads/')) {
-      clubLogoMap.set(key, path.join(BACKEND, row.logo_url));
-    }
-  }
-
+  // ── 3. Logos (adversaire : utils/logoClub.js) ─────────────────────────────────
   const scrPath      = await resolveLogo('SCR', match.date);
-  const advNorm      = normalizeClubName(match.adversaire);
-  const advLocalPath = await resolveLogoAdversaire(match.adversaire, match.date, clubLogoMap.get(advNorm) || null);
+  const advLocalPath = await resolveLogoAdversaire(match.adversaire, match.date, await getLogoAdversaire(match));
   const advCdnUrl    = match.logo_adversaire || null;
 
   // ── 4. Traitement des zones ───────────────────────────────────────────────────

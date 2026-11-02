@@ -58,6 +58,22 @@ export const deleteClub = (id) => api.delete(`/clubs/${id}`);
 export const getClubsSaison = (sansNomAffiche = false) =>
   api.get('/clubs', { params: { saison: 1, ...(sansNomAffiche ? { sans_nom_affiche: 1 } : {}) } });
 export const updateClubNoms = (id, { nom_affiche, nom_court }) => api.put(`/clubs/${id}`, { nom_affiche, nom_court });
+// Fusion des doublons : le club conservé absorbe les autres (leurs noms deviennent des alias)
+export const getClubsDoublons = () => api.get('/clubs/doublons');
+export const previewFusionClubs = (club_conserve_id, clubs_absorbes_ids) =>
+  api.post('/clubs/fusion/preview', { club_conserve_id, clubs_absorbes_ids });
+export const fusionnerClubs = (club_conserve_id, clubs_absorbes_ids, confirmer_cl_no = false) =>
+  api.post('/clubs/fusion', { club_conserve_id, clubs_absorbes_ids, confirmer_cl_no });
+// Logos Google Drive : la synchro complète les logos existants sans les remplacer
+// options : { choix: { folder_id: club_id | 'ignorer' }, variantes: { file_id: variante | 'ignorer' }, folder_ids }
+export const previewSyncLogos = (options = {}) => api.post('/logos/sync/preview', options);
+export const syncLogos = (options = {}) => api.post('/logos/sync', options);
+export const getDossiersDrive = () => api.get('/logos/drive/dossiers');
+export const getVarianteLogoActive = () => api.get('/logos/variante-active');
+export const setVarianteLogoActive = (variante) => api.put('/logos/variante-active', { variante });
+export const getLogosClub = (id) => api.get(`/clubs/${id}/logos`);
+export const setDossierDriveClub = (id, folder_id) => api.put(`/clubs/${id}/drive-folder`, { folder_id });
+export const corrigerVarianteLogo = (logoId, variante) => api.put(`/club-logos/${logoId}`, { variante });
 
 // --- Joueurs ---
 export const getJoueurs = () => api.get('/joueurs');

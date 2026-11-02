@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   getClubs, createClub, deleteClub,
+  getClubsDoublons, previewFusionClubs, fusionnerClubs,
+  previewSyncLogos, syncLogos, getDossiersDrive, getVarianteLogoActive, setVarianteLogoActive,
+  getLogosClub, setDossierDriveClub, corrigerVarianteLogo,
   getJoueurs, createJoueur, updateJoueur, deleteJoueur,
   uploadClubLogo, uploadScrLogo, uploadScrLogoMono, bulkUploadLogos, saveLogoAssociations,
   getLogosTemporaires, createLogoTemporaire, updateLogoTemporaire, deleteLogoTemporaire, toggleLogoTemporaire,
@@ -700,15 +703,35 @@ function ClubsPanel() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newClubForm, setNewClubForm]   = useState({ nom: '', equipe: '' });
   const [saving, setSaving]             = useState(false);
+  const [selection, setSelection]       = useState([]);     // ids cochés, dans l'ordre de sélection
+  const [doublons, setDoublons]         = useState([]);
+  const [fusion, setFusion]             = useState(null);   // { ids, conserveId } : modale ouverte
+  const [showSyncDrive, setShowSyncDrive] = useState(false);
+  const [ficheClubId, setFicheClubId]   = useState(null);   // fiche logos d'un club
   const fileRefs = useRef({});
 
   const showAlert = (type, msg) => { setAlert({ type, msg }); setTimeout(() => setAlert(null), 5000); };
 
   const loadClubs = useCallback(async () => {
-    try { setLoading(true); const r = await getClubs(); setClubs(r.data); }
+    try {
+      setLoading(true);
+      const [r, d] = await Promise.all([getClubs(), getClubsDoublons()]);
+      setClubs(r.data);
+      setDoublons(d.data);
+      const ids = new Set(r.data.map(c => c.id));
+      setSelection(sel => sel.filter(id => ids.has(id)));
+    }
     catch { showAlert('error', 'Erreur lors du chargement'); }
     finally { setLoading(false); }
   }, []);
+
+  // Case d'un groupe : coche ou décoche toutes ses lignes
+  const toggleGroupe = (group) => {
+    const ids = group.clubs.map(c => c.id);
+    setSelection(sel => ids.every(id => sel.includes(id))
+      ? sel.filter(id => !ids.includes(id))
+      : [...sel, ...ids.filter(id => !sel.includes(id))]);
+  };
 
   useEffect(() => { loadClubs(); }, [loadClubs]);
 
@@ -794,6 +817,49 @@ function ClubsPanel() {
         </div>
       )}
 
+      <LogosDriveBloc onSync={() => setShowSyncDrive(true)} onAlert={showAlert} />
+
+      {showSyncDrive && (
+        <SyncDriveModal
+          logoSrc={logoSrc}
+          onClose={() => setShowSyncDrive(false)}
+          onDone={() => { setShowSyncDrive(false); loadClubs(); }}
+        />
+      )}
+
+      {ficheClubId && (
+        <FicheLogosModal
+          clubId={ficheClubId}
+          logoSrc={logoSrc}
+          onClose={() => setFicheClubId(null)}
+          onChanged={loadClubs}
+        />
+      )}
+
+      {doublons.length > 0 && (
+        <DoublonsSuggeres
+          groupes={doublons}
+          logoSrc={logoSrc}
+          onFusionner={(g) => setFusion({ ids: g.clubs.map(c => c.id), conserveId: g.conserve_suggere })}
+        />
+      )}
+
+      {fusion && (
+        <FusionModal
+          clubs={fusion.ids.map(id => clubs.find(c => c.id === id)).filter(Boolean)}
+          conserveInitial={fusion.conserveId}
+          logoSrc={logoSrc}
+          onClose={() => setFusion(null)}
+          onDone={(bilan) => {
+            setFusion(null);
+            setSelection([]);
+            showAlert('success', `${bilan.absorbes.length + 1} clubs fusionnés dans « ${bilan.conserve.nom} »`
+              + (bilan.nb_matchs ? ` (${bilan.nb_matchs} match${bilan.nb_matchs > 1 ? 's' : ''} mis à jour)` : ''));
+            loadClubs();
+          }}
+        />
+      )}
+
       {showImport && (
         <ImportLogosPanel
           clubs={clubs}
@@ -808,6 +874,16 @@ function ClubsPanel() {
           <div className="actions-bar">
             <input className="form-control" value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher..." style={{ width: 200 }} />
+            {selection.length >= 2 && (
+              <button className="btn btn-primary btn-sm"
+                onClick={() => setFusion({ ids: selection, conserveId: null })}
+                title="Fusionner les clubs cochés en un seul">
+                Fusionner ({selection.length})
+              </button>
+            )}
+            {selection.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setSelection([])}>Décocher</button>
+            )}
             <button className="btn btn-secondary btn-sm" onClick={() => setShowImport(v => !v)}>
               Importer des logos
             </button>
@@ -830,6 +906,7 @@ function ClubsPanel() {
             <table>
               <thead>
                 <tr>
+                  <th style={{ width: 32 }}></th>
                   <th style={{ width: 40 }}>#</th>
                   <th style={{ width: 80 }}>Logo</th>
                   <th style={{ width: 200 }}>Club</th>
@@ -842,8 +919,13 @@ function ClubsPanel() {
                   const anyId   = group.clubs[0].id;
                   const refKey  = group.nom;
                   const loading = uploadingNom === group.nom;
+                  const coche   = group.clubs.every(c => selection.includes(c.id));
                   return (
-                    <tr key={group.nom}>
+                    <tr key={group.nom} style={coche ? { background: '#eef4ff' } : undefined}>
+                      <td>
+                        <input type="checkbox" checked={coche} onChange={() => toggleGroupe(group)}
+                          title="Sélectionner pour une fusion" style={{ cursor: 'pointer', width: 16, height: 16 }} />
+                      </td>
                       <td style={{ color: 'var(--texte-gris)' }}>{idx + 1}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -861,7 +943,12 @@ function ClubsPanel() {
                           </button>
                         </div>
                       </td>
-                      <td><strong>{group.nom}</strong></td>
+                      <td>
+                        <button className="btn-link" onClick={() => setFicheClubId(anyId)} title="Logos du club (classique, octobre rose, monochrome, dossier Drive)"
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', color: 'inherit' }}>
+                          <strong style={{ textDecoration: 'underline dotted', textUnderlineOffset: 3 }}>{group.nom}</strong>
+                        </button>
+                      </td>
                       <td>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '4px 0' }}>
                           {group.clubs.map(c => (
@@ -951,6 +1038,634 @@ function ClubsPanel() {
         </div>
       )}
     </>
+  );
+}
+
+// ─── Logos Google Drive ───────────────────────────────────────────────────────
+// La synchro complète les logos existants sans jamais les remplacer :
+// elle ne télécharge que les variantes absentes (backend/services/driveLogos.js).
+
+const VARIANTE_LABEL = { classique: 'Classique', octobre_rose: 'Octobre rose', monochrome: 'Monochrome' };
+const ACTION_LOGO = {
+  telecharger:   { label: 'à télécharger', couleur: '#1d4ed8', fond: '#dbeafe' },
+  a_jour:        { label: 'à jour', couleur: '#15803d', fond: '#dcfce7' },
+  deja_en_place: { label: 'déjà en place', couleur: '#555', fond: '#f0f2f5' },
+  manuel:        { label: 'corrigé à la main', couleur: '#555', fond: '#f0f2f5' },
+  a_trancher:    { label: 'à trancher', couleur: '#b45309', fond: '#fef3c7' },
+  ignore:        { label: 'ignoré', couleur: '#999', fond: '#f7f7f7' },
+};
+
+function PastilleFichier({ f, etatSeul = false }) {
+  const a = ACTION_LOGO[f.action] || ACTION_LOGO.ignore;
+  return (
+    <span title={`${f.nom}${f.raison ? ` — ${f.raison}` : ''}`} style={{
+      display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 11, padding: '2px 8px',
+      borderRadius: 10, background: a.fond, color: a.couleur, whiteSpace: 'nowrap',
+    }}>
+      {etatSeul ? a.label : <>{f.variante ? VARIANTE_LABEL[f.variante] : f.nom.slice(0, 24)} · {a.label}</>}
+    </span>
+  );
+}
+
+// Réglage global et bouton de synchronisation
+function LogosDriveBloc({ onSync, onAlert }) {
+  const [variante, setVariante] = useState(null);
+  const [saving, setSaving]     = useState(false);
+
+  useEffect(() => {
+    getVarianteLogoActive().then(r => setVariante(r.data.variante)).catch(() => setVariante('classique'));
+  }, []);
+
+  const changer = async (v) => {
+    setSaving(true);
+    try {
+      await setVarianteLogoActive(v);
+      setVariante(v);
+      onAlert('success', v === 'octobre_rose'
+        ? 'Variante active : octobre rose (logo classique pour les clubs qui n’en ont pas)'
+        : 'Variante active : classique');
+    } catch (err) { onAlert('error', err.response?.data?.error || 'Erreur'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-header" style={{ flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <h2>Logos des clubs</h2>
+          <p style={{ fontSize: 13, color: 'var(--texte-gris)', margin: '4px 0 0' }}>
+            La synchro Drive complète les logos manquants sans remplacer ceux déjà en place.
+          </p>
+        </div>
+        <div className="actions-bar" style={{ alignItems: 'center' }}>
+          <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            Variante active des visuels
+            <select className="form-control" style={{ width: 160 }} value={variante || ''} disabled={!variante || saving}
+              onChange={e => changer(e.target.value)}>
+              <option value="classique">Classique</option>
+              <option value="octobre_rose">Octobre rose</option>
+            </select>
+          </label>
+          <button className="btn btn-primary btn-sm" onClick={onSync}>Synchroniser les logos Drive</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Aperçu puis synchronisation
+function SyncDriveModal({ logoSrc, onClose, onDone }) {
+  const [plan, setPlan]           = useState(null);
+  const [choix, setChoix]         = useState({});      // folder_id → club_id | 'ignorer'
+  const [variantes, setVariantes] = useState({});      // file_id → variante | 'ignorer'
+  const [chargement, setChargement] = useState(true);
+  const [envoi, setEnvoi]         = useState(false);
+  const [erreur, setErreur]       = useState(null);
+  const [bilan, setBilan]         = useState(null);
+  const [voirSurs, setVoirSurs]   = useState(false);
+  const origine = useRef(null);                        // statut initial de chaque dossier
+
+  useEffect(() => {
+    let annule = false;
+    setChargement(true);
+    previewSyncLogos({ choix, variantes })
+      .then(r => {
+        if (annule) return;
+        if (!origine.current) origine.current = Object.fromEntries(r.data.dossiers.map(d => [d.folder_id, d.statut]));
+        setPlan(r.data);
+        setErreur(null);
+      })
+      .catch(err => { if (!annule) setErreur(err.response?.data?.error || 'Erreur lors de la lecture du Drive'); })
+      .finally(() => { if (!annule) setChargement(false); });
+    return () => { annule = true; };
+  }, [choix, variantes]);
+
+  const groupe = (statuts) => (plan?.dossiers || []).filter(d => statuts.includes(origine.current?.[d.folder_id]));
+  const surs = groupe(['lie', 'sur']);
+  const ambigus = groupe(['ambigu']);
+  const aucun = groupe(['aucun']);
+  const ignores = groupe(['ignore', 'scr']);
+  const clubsTries = useMemo(() => [...(plan?.clubs || [])].sort((a, b) => a.nom.localeCompare(b.nom)), [plan]);
+
+  const synchroniser = async () => {
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      const r = await syncLogos({ choix, variantes });
+      setBilan(r.data);
+    } catch (err) { setErreur(err.response?.data?.error || 'Erreur lors de la synchronisation'); }
+    finally { setEnvoi(false); }
+  };
+
+  const fichiersDe = (d) => (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+      {(d.fichiers || []).map(f => f.action === 'a_trancher' || (variantes[f.id] && f.action) ? (
+        <select key={f.id} className="form-control" title={f.nom}
+          style={{ width: 'auto', height: 26, fontSize: 11, padding: '0 6px' }}
+          value={variantes[f.id] || ''}
+          onChange={e => setVariantes(v => ({ ...v, [f.id]: e.target.value }))}>
+          <option value="">{f.nom.slice(0, 28)} : à trancher…</option>
+          {Object.entries(VARIANTE_LABEL).map(([k, l]) => <option key={k} value={k}>{f.nom.slice(0, 20)} → {l}</option>)}
+          <option value="ignorer">{f.nom.slice(0, 20)} → ignorer</option>
+        </select>
+      ) : f.action ? <PastilleFichier key={f.id} f={f} /> : (
+        <span key={f.id} style={{ fontSize: 11, color: '#999' }}>{f.nom}</span>
+      ))}
+    </div>
+  );
+
+  const ligneAChoisir = (d) => (
+    <div key={d.folder_id} style={{ padding: '8px 10px', border: '1px solid #e0e0e0', borderRadius: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <strong style={{ fontSize: 13, flex: 1 }}>📁 {d.nom} <span style={{ fontWeight: 400, color: '#999' }}>({d.nb_fichiers})</span></strong>
+        <select className="form-control" style={{ width: 240, height: 30, fontSize: 13 }}
+          value={choix[d.folder_id] ?? ''}
+          onChange={e => setChoix(c => {
+            const n = { ...c };
+            if (e.target.value === '') delete n[d.folder_id]; else n[d.folder_id] = e.target.value;
+            return n;
+          })}>
+          <option value="">— Choisir le club —</option>
+          {d.candidats.length > 0 && (
+            <optgroup label="Suggestions">
+              {d.candidats.map(c => <option key={c.id} value={c.id}>{c.nom}</option>)}
+            </optgroup>
+          )}
+          <optgroup label="Tous les clubs">
+            {clubsTries.filter(c => !c.drive_folder_id).map(c => <option key={c.id} value={c.id}>{c.nom}{c.equipe && c.equipe !== c.nom ? ` (${c.equipe})` : ''}</option>)}
+          </optgroup>
+          <option value="ignorer">Ignorer ce dossier</option>
+        </select>
+      </div>
+      {d.regle && <div style={{ fontSize: 11, color: '#999' }}>{d.regle}</div>}
+      {d.statut === 'choisi' && fichiersDe(d)}
+    </div>
+  );
+
+  const section = { fontSize: 14, fontWeight: 600, margin: '18px 0 8px' };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !envoi && onClose()}>
+      <div className="modal" style={{ maxWidth: 820 }}>
+        <div className="modal-header">
+          <h3>Synchroniser les logos Drive</h3>
+          <button className="btn-icon" onClick={onClose} disabled={envoi}>✕</button>
+        </div>
+        <div className="modal-body">
+          {erreur && <div className="alert alert-error">❌ {erreur}</div>}
+          {!plan && chargement && <div className="loading-center"><div className="spinner"></div></div>}
+
+          {bilan ? (
+            <div style={{ fontSize: 14 }}>
+              <div className="alert alert-success">✅ Synchronisation terminée</div>
+              <ul style={{ lineHeight: 1.8, paddingLeft: 18 }}>
+                <li>{bilan.associes.length} dossier(s) associé(s)</li>
+                <li>{bilan.telecharges.length} logo(s) téléchargé(s)
+                  {bilan.telecharges.length > 0 && (
+                    <ul style={{ color: '#555' }}>
+                      {bilan.telecharges.map(t => <li key={t.url}>{t.club} · {VARIANTE_LABEL[t.variante]}</li>)}
+                    </ul>
+                  )}
+                </li>
+                <li>{bilan.a_jour} logo(s) déjà à jour</li>
+                {bilan.ignores.length > 0 && <li>Dossier(s) ignoré(s) : {bilan.ignores.join(', ')}</li>}
+              </ul>
+              {bilan.erreurs.length > 0 && (
+                <div className="alert alert-error" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <strong>{bilan.erreurs.length} erreur(s)</strong>
+                  {bilan.erreurs.map(e => <div key={e.club + e.fichier}>{e.club} / {e.fichier} : {e.erreur}</div>)}
+                </div>
+              )}
+            </div>
+          ) : plan && (
+            <>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+                {[
+                  [`${plan.resume.dossiers} dossiers`, '#f0f2f5', '#333'],
+                  [`${surs.length} associés sûrs`, '#dcfce7', '#15803d'],
+                  [`${ambigus.length} ambigus`, '#fef3c7', '#b45309'],
+                  [`${aucun.length} sans correspondance`, '#fee2e2', '#b91c1c'],
+                  [`${plan.resume.a_telecharger} logo(s) à télécharger`, '#dbeafe', '#1d4ed8'],
+                ].map(([t, bg, c]) => <span key={t} style={{ padding: '4px 10px', borderRadius: 12, background: bg, color: c }}>{t}</span>)}
+                {chargement && <span style={{ color: '#999' }}>⏳ mise à jour…</span>}
+              </div>
+
+              <div style={section}>Ambigus ({ambigus.length})</div>
+              {ambigus.length === 0 ? <p style={{ fontSize: 13, color: '#999' }}>Aucun</p>
+                : <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{ambigus.map(ligneAChoisir)}</div>}
+
+              <div style={section}>Sans correspondance ({aucun.length})</div>
+              {aucun.length === 0 ? <p style={{ fontSize: 13, color: '#999' }}>Aucun</p>
+                : <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>{aucun.map(ligneAChoisir)}</div>}
+
+              <div style={{ ...section, display: 'flex', alignItems: 'center', gap: 8 }}>
+                Associés sûrs ({surs.length})
+                <button className="btn btn-ghost btn-sm" onClick={() => setVoirSurs(v => !v)}>{voirSurs ? 'Masquer' : 'Afficher'}</button>
+              </div>
+              {(voirSurs ? surs : surs.filter(d => d.fichiers.some(f => ['telecharger', 'a_trancher'].includes(f.action) || variantes[f.id])))
+                .map(d => (
+                  <div key={d.folder_id} style={{ padding: '6px 10px', borderBottom: '1px solid #f0f0f0', fontSize: 13 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <LogoThumb src={logoSrc(d.club?.logo_url)} label={d.club?.nom} />
+                      <span style={{ flex: 1 }}>📁 {d.nom} → <strong>{d.club?.nom}</strong></span>
+                    </div>
+                    {fichiersDe(d)}
+                  </div>
+                ))}
+              {!voirSurs && <p style={{ fontSize: 12, color: '#999' }}>Seuls les dossiers avec un logo à télécharger ou à trancher sont affichés.</p>}
+
+              {ignores.length > 0 && (
+                <p style={{ fontSize: 12, color: '#999', marginTop: 12 }}>
+                  Non synchronisés : {ignores.map(d => d.statut === 'scr' ? `${d.nom} (logo SCR déjà en place)` : d.nom).join(', ')}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+        <div className="modal-footer">
+          {bilan ? (
+            <button className="btn btn-primary" onClick={onDone}>Fermer</button>
+          ) : (
+            <>
+              <button className="btn btn-ghost" onClick={onClose} disabled={envoi}>Annuler</button>
+              <button className="btn btn-primary" onClick={synchroniser} disabled={!plan || chargement || envoi}>
+                {envoi ? '⏳ Synchronisation…' : `✔ Synchroniser${plan ? ` (${plan.resume.a_telecharger} logo${plan.resume.a_telecharger > 1 ? 's' : ''})` : ''}`}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Fiche logos d'un club : 3 emplacements, dossier Drive lié, correction des variantes
+function FicheLogosModal({ clubId, logoSrc, onClose, onChanged }) {
+  const [data, setData]           = useState(null);
+  const [erreur, setErreur]       = useState(null);
+  const [message, setMessage]     = useState(null);
+  const [occupe, setOccupe]       = useState(false);
+  const [dossiers, setDossiers]   = useState(null);   // liste Drive, chargée à la demande
+  const [dossierChoisi, setDossierChoisi] = useState('');
+
+  const charger = useCallback(() => {
+    getLogosClub(clubId)
+      .then(r => { setData(r.data); setErreur(null); })
+      .catch(err => setErreur(err.response?.data?.error || 'Erreur de chargement'));
+  }, [clubId]);
+  useEffect(() => { charger(); }, [charger]);
+
+  const action = async (fn, succes) => {
+    setOccupe(true);
+    setErreur(null);
+    try {
+      const r = await fn();
+      setMessage(typeof succes === 'function' ? succes(r.data) : succes);
+      charger();
+      onChanged();
+    } catch (err) { setErreur(err.response?.data?.error || 'Erreur'); }
+    finally { setOccupe(false); }
+  };
+
+  const ouvrirChangement = async () => {
+    setDossierChoisi(data?.club.drive_folder_id || '');
+    try { setDossiers((await getDossiersDrive()).data); }
+    catch (err) { setErreur(err.response?.data?.error || 'Drive inaccessible'); }
+  };
+
+  const enregistrerDossier = () => action(
+    () => setDossierDriveClub(clubId, dossierChoisi || null),
+    (r) => {
+      setDossiers(null);
+      const n = r.synchro?.telecharges?.length || 0;
+      return r.drive_folder_id ? `Dossier « ${r.drive_folder_nom} » lié${n ? `, ${n} logo(s) téléchargé(s)` : ''}` : 'Aucun dossier lié';
+    });
+
+  // Variante d'un fichier Drive : logo déjà téléchargé → correction ; sinon synchro de ce seul fichier
+  const changerVariante = (f, v) => {
+    const logo = data.logos.find(l => l.drive_file_id === f.id);
+    if (logo && v !== 'ignorer') {
+      return action(() => corrigerVarianteLogo(logo.id, v), 'Variante corrigée');
+    }
+    return action(
+      () => syncLogos({ folder_ids: [data.club.drive_folder_id], variantes: { [f.id]: v } }),
+      (r) => r.telecharges.length ? `${r.telecharges.length} logo téléchargé` : 'Rien à télécharger : cette variante est déjà en place ou ignorée');
+  };
+
+  if (!data) {
+    return (
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="modal"><div className="modal-body">
+          {erreur ? <div className="alert alert-error">❌ {erreur}</div> : <div className="loading-center"><div className="spinner"></div></div>}
+        </div></div>
+      </div>
+    );
+  }
+
+  const { club, logos, dossier } = data;
+  const drive = (v) => logos.find(l => l.variante === v);
+  const emplacements = [
+    { v: 'classique',    existant: club.logo_url },
+    { v: 'octobre_rose', existant: null },
+    { v: 'monochrome',   existant: club.logo_monochrome_url },
+  ];
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !occupe && onClose()}>
+      <div className="modal" style={{ maxWidth: 680 }}>
+        <div className="modal-header">
+          <h3>Logos — {club.nom}</h3>
+          <button className="btn-icon" onClick={onClose} disabled={occupe}>✕</button>
+        </div>
+        <div className="modal-body">
+          {erreur && <div className="alert alert-error">❌ {erreur}</div>}
+          {message && <div className="alert alert-success">✅ {message}</div>}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 10 }}>
+            {emplacements.map(({ v, existant }) => {
+              const l = drive(v);
+              const url = existant || l?.fichier_local || null;
+              return (
+                <div key={v} style={{ border: '1px solid #e0e0e0', borderRadius: 8, padding: 10, textAlign: 'center' }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{VARIANTE_LABEL[v]}</div>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ width: 84, height: 84, borderRadius: 8, background: v === 'monochrome' ? '#333' : '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                      {url ? <img src={logoSrc(url)} alt={VARIANTE_LABEL[v]} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        : <span style={{ opacity: 0.3, fontSize: 22, color: v === 'monochrome' ? '#fff' : undefined }}>?</span>}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#777', marginTop: 6, minHeight: 28 }}>
+                    {existant ? 'Logo déjà en place' : l ? `Drive : ${l.drive_file_nom}` : v === 'monochrome' || v === 'octobre_rose' ? 'Absent → logo classique utilisé' : 'Absent'}
+                  </div>
+                  {!existant && l && (
+                    <select className="form-control" style={{ height: 26, fontSize: 11, padding: '0 6px', marginTop: 4 }}
+                      value={v} disabled={occupe} title="Corriger la variante de ce fichier"
+                      onChange={e => action(() => corrigerVarianteLogo(l.id, e.target.value), 'Variante corrigée')}>
+                      {Object.entries(VARIANTE_LABEL).map(([k, lab]) => <option key={k} value={k}>{lab}</option>)}
+                    </select>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ fontSize: 14, fontWeight: 600, margin: '18px 0 8px' }}>Dossier Google Drive</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13 }}>
+            <span style={{ flex: 1 }}>
+              {club.drive_folder_id ? <>📁 <strong>{club.drive_folder_nom || dossier?.nom || club.drive_folder_id}</strong></> : <span style={{ color: '#999' }}>Aucun dossier lié</span>}
+              {club.drive_folder_manuel && <span style={{ fontSize: 11, color: '#777' }}> · choisi à la main</span>}
+            </span>
+            {!dossiers && <button className="btn btn-secondary btn-sm" onClick={ouvrirChangement} disabled={occupe}>Changer l’association</button>}
+          </div>
+          {dossiers && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
+              <select className="form-control" style={{ flex: 1 }} value={dossierChoisi} onChange={e => setDossierChoisi(e.target.value)}>
+                <option value="">Aucun dossier</option>
+                {dossiers.map(d => <option key={d.id} value={d.id}>{d.nom}</option>)}
+              </select>
+              <button className="btn btn-primary btn-sm" onClick={enregistrerDossier} disabled={occupe}>{occupe ? '⏳' : 'Enregistrer'}</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => setDossiers(null)} disabled={occupe}>Annuler</button>
+            </div>
+          )}
+
+          {dossier?.erreur && <div className="alert alert-error" style={{ marginTop: 8 }}>❌ {dossier.erreur}</div>}
+          {dossier?.fichiers?.length > 0 && (
+            <table style={{ width: '100%', marginTop: 10, fontSize: 12 }}>
+              <thead><tr><th style={{ textAlign: 'left' }}>Fichier</th><th style={{ textAlign: 'left' }}>Variante</th><th style={{ textAlign: 'left' }}>État</th></tr></thead>
+              <tbody>
+                {dossier.fichiers.map(f => (
+                  <tr key={f.id}>
+                    <td style={{ wordBreak: 'break-all' }}>{f.nom}</td>
+                    <td>
+                      <select className="form-control" style={{ height: 26, fontSize: 11, padding: '0 6px' }}
+                        value={f.variante || 'ignorer'} disabled={occupe || f.mimeType === 'application/pdf'}
+                        onChange={e => changerVariante(f, e.target.value)}>
+                        {Object.entries(VARIANTE_LABEL).map(([k, lab]) => <option key={k} value={k}>{lab}</option>)}
+                        <option value="ignorer">Ignoré</option>
+                      </select>
+                    </td>
+                    <td><PastilleFichier f={f} etatSeul /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-primary" onClick={onClose} disabled={occupe}>Fermer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Doublons suggérés ────────────────────────────────────────────────────────
+// Groupes renvoyés par GET /api/clubs/doublons : « probable » (même nom une fois
+// retirés casse, accents, ponctuation et sigles FC/AS/US…), « à vérifier » (nom abrégé).
+
+function DoublonsSuggeres({ groupes, logoSrc, onFusionner }) {
+  const [ouvert, setOuvert] = useState(true);
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card-header">
+        <h2>Doublons suggérés <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--texte-gris)' }}>({groupes.length})</span></h2>
+        <button className="btn btn-ghost btn-sm" onClick={() => setOuvert(v => !v)}>{ouvert ? 'Masquer' : 'Afficher'}</button>
+      </div>
+      {ouvert && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+          {groupes.map(g => (
+            <div key={g.clubs.map(c => c.id).join('-')} style={{
+              display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+              padding: '8px 12px', border: '1px solid #e0e0e0', borderRadius: 8,
+            }}>
+              {g.niveau === 'a_verifier' && (
+                <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 10, background: '#fef3c7', color: '#b45309' }}>
+                  à vérifier
+                </span>
+              )}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, flex: 1, alignItems: 'center' }}>
+                {g.clubs.map(c => (
+                  <span key={c.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+                    <LogoThumb src={logoSrc(c.logo_url)} label={c.nom} />
+                    <span>
+                      <strong>{c.equipe && c.equipe !== c.nom ? c.equipe : c.nom}</strong>
+                      <span style={{ color: '#999', fontSize: 11 }}> #{c.id}{c.fff_cl_no ? ' · FFF' : ''}</span>
+                    </span>
+                  </span>
+                ))}
+              </div>
+              {g.cl_no_differents && (
+                <span style={{ fontSize: 12, color: '#b45309' }}>⚠ numéros FFF différents</span>
+              )}
+              <button className="btn btn-secondary btn-sm" onClick={() => onFusionner(g)}>Fusionner ce groupe</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Modale de fusion ─────────────────────────────────────────────────────────
+// Choix du club conservé, récapitulatif de POST /api/clubs/fusion/preview, puis
+// POST /api/clubs/fusion. Les autres clubs sont absorbés dans l'ordre affiché
+// (priorité pour reprendre un logo si le club conservé n'en a pas).
+
+function FusionModal({ clubs, conserveInitial, logoSrc, onClose, onDone }) {
+  const defaut = conserveInitial
+    ?? (clubs.find(c => c.fff_cl_no && c.logo_url) || clubs.find(c => c.fff_cl_no) || clubs.find(c => c.logo_url) || clubs[0])?.id;
+  const [conserveId, setConserveId] = useState(defaut);
+  const [preview, setPreview]       = useState(null);
+  const [erreur, setErreur]         = useState(null);
+  const [chargement, setChargement] = useState(false);
+  const [envoi, setEnvoi]           = useState(false);
+  const [confirmeClNo, setConfirmeClNo] = useState(false);
+
+  // Clé stable : le parent recrée `clubs` à chaque rendu
+  const idsCle   = clubs.map(c => c.id).join(',');
+  const absorbes = useMemo(
+    () => idsCle.split(',').map(Number).filter(id => id !== conserveId),
+    [idsCle, conserveId]);
+
+  useEffect(() => {
+    if (!conserveId || absorbes.length === 0) return;
+    let annule = false;
+    setChargement(true);
+    setErreur(null);
+    setConfirmeClNo(false);
+    previewFusionClubs(conserveId, absorbes)
+      .then(r => { if (!annule) setPreview(r.data); })
+      .catch(err => { if (!annule) { setPreview(null); setErreur(err.response?.data?.error || 'Erreur lors de la prévisualisation'); } })
+      .finally(() => { if (!annule) setChargement(false); });
+    return () => { annule = true; };
+  }, [conserveId, absorbes]);
+
+  const besoinConfirmClNo = (preview?.cl_no_absorbes?.length || 0) > 0;
+  const peutConfirmer = preview && preview.peut_fusionner && !chargement && !envoi
+                     && (!besoinConfirmClNo || confirmeClNo);
+
+  const confirmer = async () => {
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      const r = await fusionnerClubs(conserveId, absorbes, confirmeClNo);
+      onDone(r.data);
+    } catch (err) {
+      setErreur(err.response?.data?.error || 'Erreur lors de la fusion');
+      if (err.response?.data?.preview) setPreview(err.response.data.preview);
+    } finally { setEnvoi(false); }
+  };
+
+  const nomDe = (id) => clubs.find(c => c.id === id)?.nom || `#${id}`;
+  const section = { fontSize: 13, fontWeight: 600, margin: '16px 0 6px' };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !envoi && onClose()}>
+      <div className="modal" style={{ maxWidth: 640 }}>
+        <div className="modal-header">
+          <h3>Fusionner {clubs.length} clubs</h3>
+          <button className="btn-icon" onClick={onClose} disabled={envoi}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div style={{ ...section, marginTop: 0 }}>Club à conserver</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {clubs.map(c => (
+              <label key={c.id} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', cursor: 'pointer',
+                border: `1px solid ${c.id === conserveId ? 'var(--bleu)' : '#e0e0e0'}`, borderRadius: 8,
+                background: c.id === conserveId ? 'var(--bleu-light)' : 'white',
+              }}>
+                <input type="radio" name="club-conserve" checked={c.id === conserveId} onChange={() => setConserveId(c.id)} />
+                <LogoThumb src={logoSrc(c.logo_url)} label={c.nom} />
+                <span style={{ flex: 1 }}>
+                  <strong>{c.nom}</strong>
+                  {c.equipe && c.equipe !== c.nom && <span style={{ color: '#666' }}> · équipe « {c.equipe} »</span>}
+                  <span style={{ color: '#999', fontSize: 12 }}> #{c.id}</span>
+                </span>
+                {c.fff_cl_no
+                  ? <span style={{ fontSize: 11, color: '#15803d' }}>FFF {c.fff_cl_no}</span>
+                  : <span style={{ fontSize: 11, color: '#999' }}>non rattaché</span>}
+              </label>
+            ))}
+          </div>
+
+          {chargement && <div className="loading-center" style={{ padding: 16 }}><div className="spinner"></div></div>}
+
+          {preview && !chargement && (
+            <>
+              <div style={section}>Ce qui va changer</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <LogoThumb src={logoSrc(preview.resultat.logo_url)} label="Logo retenu" />
+                <span style={{ fontSize: 13 }}>
+                  Logo retenu : {preview.resultat.logo_url
+                    ? (preview.resultat.logo_source_id === preview.conserve.id ? 'celui du club conservé' : `repris de ${nomDe(preview.resultat.logo_source_id)}`)
+                    : 'aucun'}
+                  {preview.resultat.fff_cl_no && <> · FFF {preview.resultat.fff_cl_no}</>}
+                </span>
+              </div>
+              <ul style={{ fontSize: 13, margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+                <li>
+                  {preview.nb_matchs === 0 ? 'Aucun match à modifier'
+                    : `${preview.nb_matchs} match${preview.nb_matchs > 1 ? 's' : ''} renommé${preview.nb_matchs > 1 ? 's' : ''}`}
+                  {preview.matchs.length > 0 && (
+                    <ul style={{ paddingLeft: 16, color: '#555' }}>
+                      {preview.matchs.map(m => (
+                        <li key={m.id}>{m.equipe} · {new Date(m.date).toLocaleDateString('fr-FR')} : « {m.avant} » → « {m.apres} »</li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+                {preview.logos_temporaires > 0 && <li>{preview.logos_temporaires} logo(s) temporaire(s) rattaché(s) au club conservé</li>}
+                {preview.aliases.length > 0 && (
+                  <li>Noms gardés en alias (l'import FFF ne les recréera plus) : {preview.aliases.map(a => `« ${a.alias} »`).join(', ')}</li>
+                )}
+                <li>{preview.absorbes.length} club{preview.absorbes.length > 1 ? 's' : ''} supprimé{preview.absorbes.length > 1 ? 's' : ''} : {preview.absorbes.map(a => a.nom).join(', ')}</li>
+              </ul>
+
+              {preview.avertissements.map(a => (
+                <div key={a} className="alert alert-warning" style={{ marginTop: 10, fontSize: 13 }}>⚠ {a}</div>
+              ))}
+
+              {besoinConfirmClNo && (
+                <div className="alert alert-warning" style={{ marginTop: 10, fontSize: 13, flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <div>
+                    ⚠ Pour la FFF, ce sont des clubs différents :{' '}
+                    {preview.cl_no_absorbes.map(c => `${c.nom} (FFF ${c.fff_cl_no})`).join(', ')}.
+                    Leurs matchs et classements s'afficheront sous le nom et le logo de « {preview.conserve.nom} ».
+                  </div>
+                  <label style={{ display: 'flex', gap: 6, marginTop: 6, cursor: 'pointer', fontWeight: 600 }}>
+                    <input type="checkbox" checked={confirmeClNo} onChange={e => setConfirmeClNo(e.target.checked)} />
+                    Je confirme la fusion
+                  </label>
+                </div>
+              )}
+
+              {preview.conflits.length > 0 && (
+                <div className="alert alert-error" style={{ marginTop: 10, fontSize: 13, flexDirection: 'column', alignItems: 'flex-start' }}>
+                  <strong>Fusion impossible : ces matchs porteraient le même adversaire le même jour.</strong>
+                  <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+                    {preview.conflits.map(c => (
+                      <li key={c.match_ids.join('-')}>
+                        {c.equipe} · {new Date(c.date).toLocaleDateString('fr-FR')} · « {c.adversaire} » (matchs {c.match_ids.map(id => `#${id}`).join(', ')})
+                      </li>
+                    ))}
+                  </ul>
+                  Supprimez ou corrigez le match en double dans Programme, puis recommencez.
+                </div>
+              )}
+            </>
+          )}
+
+          {erreur && <div className="alert alert-error" style={{ marginTop: 10 }}>❌ {erreur}</div>}
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose} disabled={envoi}>Annuler</button>
+          <button className="btn btn-primary" onClick={confirmer} disabled={!peutConfirmer}>
+            {envoi ? '⏳ Fusion…' : `✔ Fusionner dans « ${nomDe(conserveId)} »`}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

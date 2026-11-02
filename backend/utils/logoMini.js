@@ -4,6 +4,7 @@
  * Les logos importés pèsent souvent plusieurs Mo : chaque logo local
  * /uploads/logos/<nom>.<ext> a une miniature WebP carrée de 64 px,
  * /uploads/logos/mini/<nom>-64.webp, régénérée si le logo est plus récent.
+ * Logos Drive /uploads/logos/<club_id>/<variante>.png → mini/<club_id>-<variante>-64.webp.
  *
  *   cheminMini(url)        → chemin public de la miniature (null si logo non local)
  *   genererMini(url)       → crée ou met à jour la miniature (Promise)
@@ -19,11 +20,12 @@ const UPLOADS  = path.join(__dirname, '..', 'uploads');
 const MINI_DIR = path.join(UPLOADS, 'logos', 'mini');
 const TAILLE   = 64;
 
-const LOCAL = /^\/uploads\/logos\/([^/]+)\.(png|jpe?g|webp)$/i;
+const LOCAL = /^\/uploads\/logos\/(?:(\d+)\/)?([^/]+)\.(png|jpe?g|webp)$/i;
 
 function cheminMini(url) {
   const m = LOCAL.exec(url || '');
-  return m ? `/uploads/logos/mini/${m[1]}-${TAILLE}.webp` : null;
+  if (!m) return null;
+  return `/uploads/logos/mini/${m[1] ? `${m[1]}-${m[2]}` : m[2]}-${TAILLE}.webp`;
 }
 
 const fichier = (cheminPublic) => path.join(UPLOADS, cheminPublic.replace(/^\/uploads\//, ''));

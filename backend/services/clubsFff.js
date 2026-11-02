@@ -37,7 +37,8 @@ const nomDeBase = (s) => normalizeName(s).replace(/\s+\d+$/, '');
 /**
  * Retourne { id, action } avec action :
  *   'deja'      ligne déjà rattachée à ce cl_no (nom_fff mis à jour s'il a changé → 'renomme')
- *   'rattache'  ligne existante rattachée (nom FFF exact, sinon nom normalisé unique)
+ *   'alias'     cl_no absorbé par une fusion : club conservé, rien n'est modifié
+ *   'rattache'  ligne existante rattachée (alias de fusion, nom FFF exact, sinon nom normalisé unique)
  *   'cree'      aucune ligne : création (nom = nom_fff)
  *   'ambigu'    plusieurs candidats : rien n'est fait (id null, candidats listés)
  *
@@ -55,7 +56,28 @@ async function assurerClub(clNo, nomFff, { autresNoms = [], db = pool } = {}) {
     return { id, action: 'renomme', avant: nom_fff };
   }
 
+  // cl_no d'un club absorbé par une fusion (club_aliases) : le club conservé le représente
+  const aliasClNo = await db.query('SELECT club_id FROM club_aliases WHERE fff_cl_no = $1', [clNo]);
+  if (aliasClNo.rows[0]) return { id: aliasClNo.rows[0].club_id, action: 'alias' };
+
   const { rows } = await db.query('SELECT id, nom, equipe FROM clubs WHERE fff_cl_no IS NULL');
+  const cles = new Set([nomFff, ...autresNoms].map(nomDeBase));
+
+  // 0. Alias d'un club non rattaché (nom d'un club absorbé par une fusion)
+  const aliases = await db.query(
+    `SELECT a.club_id, a.alias FROM club_aliases a
+       JOIN clubs c ON c.id = a.club_id
+      WHERE c.fff_cl_no IS NULL`);
+  const parAlias = [...new Set(aliases.rows.filter(a => cles.has(nomDeBase(a.alias))).map(a => a.club_id))];
+  if (parAlias.length === 1) {
+    const r = await db.query(
+      `UPDATE clubs SET fff_cl_no = $1, nom_fff = $2
+        WHERE id = $3 AND fff_cl_no IS NULL
+        RETURNING id`,
+      [clNo, nomFff, parAlias[0]]
+    );
+    if (r.rows[0]) return { id: r.rows[0].id, action: 'rattache', regle: 'alias' };
+  }
 
   // 1. Nom FFF exact (règle des requêtes par nom du site : LOWER(TRIM(nom)))
   const exact = rows.filter(r => r.nom.trim().toLowerCase() === nomFff.trim().toLowerCase());
@@ -63,7 +85,6 @@ async function assurerClub(clNo, nomFff, { autresNoms = [], db = pool } = {}) {
 
   // 2. À défaut, nom normalisé (sans casse, ponctuation, accents ni numéro final)
   if (exact.length === 0) {
-    const cles = new Set([nomFff, ...autresNoms].map(nomDeBase));
     candidats = rows.filter(r => cles.has(nomDeBase(r.nom)) || (r.equipe && cles.has(nomDeBase(r.equipe))));
   }
 
@@ -125,19 +146,34 @@ async function assurerClubs(clubs) {
 
 // ── SQL partagé (routes publiques) ────────────────────────────────────────────
 
+// Club représentant un cl_no : club rattaché, sinon club ayant absorbé ce cl_no (club_aliases)
+const sqlClubParClNo = (colClNo) => `COALESCE(
+    (SELECT c.id FROM clubs c WHERE c.fff_cl_no = ${colClNo}),
+    (SELECT a.club_id FROM club_aliases a WHERE a.fff_cl_no = ${colClNo}))`;
+
 // Jointure du club adverse d'un match `m` (alias `ca`)
-const SQL_JOIN_CLUB_ADVERSAIRE = 'LEFT JOIN clubs ca ON ca.fff_cl_no = m.adversaire_cl_no';
+const SQL_JOIN_CLUB_ADVERSAIRE = `LEFT JOIN clubs ca ON ca.id = ${sqlClubParClNo('m.adversaire_cl_no')}`;
+
+// Logos Drive (club_logos) : COMPLÈTENT les logos existants, même règle que
+// utils/logoClub.js (getLogoClub) — octobre rose si c'est la variante active, puis
+// logo existant (clubs.logo_url), puis logo classique du Drive.
+const sqlLogoDrive = (colClubId, variante) =>
+  `(SELECT l.fichier_local FROM club_logos l WHERE l.club_id = ${colClubId} AND l.variante = '${variante}')`;
+const SQL_VARIANTE_ROSE = `(SELECT r.valeur FROM reglages r WHERE r.cle = 'variante_logo_active') = 'octobre_rose'`;
+const sqlLogoClub = (alias) => `COALESCE(
+    CASE WHEN ${SQL_VARIANTE_ROSE} THEN ${sqlLogoDrive(`${alias}.id`, 'octobre_rose')} END,
+    ${alias}.logo_url, ${sqlLogoDrive(`${alias}.id`, 'classique')})`;
 
 // Logo local par nom (lignes non rattachées, matchs saisis à la main)
-const sqlLogoParNom = (colNom) => `(SELECT c.logo_url FROM clubs c
-    WHERE c.logo_url IS NOT NULL AND LOWER(TRIM(c.nom)) = LOWER(TRIM(${colNom}))
+const sqlLogoParNom = (colNom) => `(SELECT ${sqlLogoClub('c')} FROM clubs c
+    WHERE LOWER(TRIM(c.nom)) = LOWER(TRIM(${colNom})) AND ${sqlLogoClub('c')} IS NOT NULL
     LIMIT 1)`;
 
 // Logo adverse : cl_no, puis nom, puis logo FFF du match (requiert SQL_JOIN_CLUB_ADVERSAIRE)
-const SQL_LOGO_ADVERSAIRE = `COALESCE(ca.logo_url, ${sqlLogoParNom('m.adversaire')}, m.logo_adversaire)`;
+const SQL_LOGO_ADVERSAIRE = `COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('m.adversaire')}, m.logo_adversaire)`;
 
 // Logo local seul (champ historique logo_adversaire_local : sans repli sur le logo FFF)
-const SQL_LOGO_ADVERSAIRE_LOCAL = `COALESCE(ca.logo_url, ${sqlLogoParNom('m.adversaire')})`;
+const SQL_LOGO_ADVERSAIRE_LOCAL = `COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('m.adversaire')})`;
 
 // Colonnes du club adverse nécessaires à nommerAdversaire()
 const SQL_NOMS_ADVERSAIRE = `ca.nom_affiche AS ca_nom_affiche, ca.nom_court AS ca_nom_court, ca.nom_fff AS ca_nom_fff`;
@@ -160,5 +196,5 @@ function nommerAdversaire(row, { court = false } = {}) {
 module.exports = {
   nomClub, assurerClub, assurerClubs, nommerAdversaire,
   SQL_JOIN_CLUB_ADVERSAIRE, SQL_LOGO_ADVERSAIRE, SQL_LOGO_ADVERSAIRE_LOCAL, SQL_NOMS_ADVERSAIRE,
-  sqlLogoParNom,
+  sqlLogoParNom, sqlLogoClub, sqlClubParClNo, nomDeBase,
 };
