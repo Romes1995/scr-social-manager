@@ -69,12 +69,13 @@ Lignes attendues, dans cet ordre :
 ```
 [Schéma] Base vide : schéma créé (migrations 007_logo_fff_local.sql)
 🚀 SCR Social Manager API démarré sur http://0.0.0.0:3001 (mode vitrine)
-[Scheduler] Rattrapage : aucun import …
-[Scheduler] ▶️  synchro_fff (rattrapage) démarrée …
-[FFF] Import : 63 créé(s), …
-[LogosFFF] 20 téléchargé(s), 0 déjà présent(s), 0 échec(s)
-[Classement] ✅ SCR 1 (…) : 12 clubs, journée …
-[Scheduler] ✅ synchro_fff (rattrapage) terminée …
+[Scheduler] 🔁 Rattrapage : aucun import réussi en base
+[Scheduler] ▶️  synchro_fff (rattrapage) démarrée [taches_log #1]
+[LogosFFF] 36 téléchargé(s), 0 déjà présent(s), 0 échec(s)
+[FFF] Import : 62 créé(s), 0 mis à jour, … ; clubs : 35 créé(s), …
+[Classement] ✅ SCR 1 (District 1 Alsace, POULE B) : 12 clubs, journée 7, SCR 5e
+[LogosFFF] 0 téléchargé(s), 27 déjà présent(s), 0 échec(s)
+[Scheduler] ✅ synchro_fff (rattrapage) terminée [#1]
 ```
 
 Les nombres changent selon la saison. Après la première fois, l'import tourne

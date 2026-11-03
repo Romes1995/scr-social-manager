@@ -1,0 +1,138 @@
+# Test du déploiement « vitrine seule » en suivant deploy/DEPLOIEMENT.md :
+# cp .env.example .env, docker compose up -d --build, import FFF sur base vide,
+# pages et logos servis par Nginx, puis persistance après down / up.
+name: Vitrine Docker
+
+on:
+  push:
+    branches: [main, feat/vitrine-seule]
+    paths:
+      - 'backend/**'
+      - 'frontend-public/**'
+      - 'deploy/**'
+      - '.github/workflows/vitrine-docker.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend-public/**'
+      - 'deploy/**'
+      - '.github/workflows/vitrine-docker.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: vitrine-docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: deploy
+    env:
+      BASE: http://127.0.0.1:8080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Étapes du guide (section 2) ─────────────────────────────────────────
+      - name: cp .env.example .env
+        run: cp .env.example .env
+
+      - name: docker compose up -d --build
+        run: docker compose up -d --build
+
+      # ── Vérifications (section 3) ───────────────────────────────────────────
+      - name: Conteneurs démarrés
+        run: |
+          docker compose ps
+          for s in postgres backend nginx; do
+            test "$(docker compose ps --status running --services | grep -cx "$s")" = 1 \
+              || { echo "::error::service $s arrêté"; exit 1; }
+          done
+
+      - name: Santé via Nginx
+        run: |
+          for i in $(seq 1 60); do
+            curl -fsS "$BASE/api/health" && break
+            sleep 2
+          done
+          curl -fsS "$BASE/api/health" | jq -e '.status == "ok" and .mode == "vitrine"'
+
+      - name: Routes d'administration absentes
+        run: |
+          for u in /api/fff/import /api/matches /api/auth/me /api/users; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE$u")
+            echo "$u → $code"
+            test "$code" = 404 || { echo "::error::$u répond $code (404 attendu)"; exit 1; }
+          done
+
+      - name: Attente de l'import FFF (rattrapage sur base vide)
+        run: |
+          for i in $(seq 1 120); do
+            if docker compose logs backend | grep -q 'synchro_fff (rattrapage) terminée'; then break; fi
+            if docker compose logs backend | grep -q 'synchro_fff (rattrapage) en échec'; then break; fi
+            sleep 5
+          done
+          docker compose logs backend | grep -E '\[(Schéma|Scheduler|FFF|LogosFFF|Classement)\]' | grep -v 'page chargée'
+          docker compose logs backend | grep -q 'Base vide : schéma créé'
+          docker compose logs backend | grep -q 'Rattrapage : aucun import'
+          docker compose logs backend | grep -q '✅ synchro_fff (rattrapage) terminée' \
+            || { echo "::error::import FFF non terminé ou en échec"; exit 1; }
+
+      - name: Accueil et télé via Nginx, miniatures servies
+        run: |
+          curl -fsS "$BASE/api/public/accueil" -o accueil.json
+          curl -fsS "$BASE/api/public/tele"    -o tele.json
+          jq -e '.club.logo_mini != null and .club.logo_fff != null' accueil.json
+          jq -e '[.resultats[], .prochains[]] | length > 0' accueil.json
+          jq -e '[.classements[].lignes[]] | length > 0' accueil.json
+          jq -e '.equipes | length > 0' tele.json
+
+          # Tous les logos de l'accueil et de la télé ont une miniature
+          sans=$(jq -s '[ .[0].club, (.[0].prochains[], .[0].resultats[] | {logo_mini: .logo_adversaire_mini}),
+                          (.[0].classements[].lignes[]), (.[1].equipes[].resultats[] | {logo_mini: .logo_adversaire_mini}),
+                          (.[1].equipes[].classement.lignes[]?) ] | map(select(.logo_mini == null)) | length' accueil.json tele.json)
+          echo "logos sans miniature : $sans"
+          test "$sans" = 0
+
+          # Miniatures servies par Nginx (/uploads → backend)
+          for m in $(jq -r '.club.logo_mini, (.classements[].lignes[].logo_mini)' accueil.json | sort -u); do
+            type=$(curl -fsS -o /dev/null -w '%{content_type}' "$BASE$m")
+            echo "$m → $type"
+            test "$type" = image/webp
+          done
+
+      - name: Pages du site via Nginx
+        run: |
+          for p in / /tele /matchs /classement; do
+            curl -fsS "$BASE$p" | grep -q '<div id="root">' || { echo "::error::page $p"; exit 1; }
+            echo "$p OK"
+          done
+          curl -fsS -o /dev/null "$BASE/visuels/web/slogan-300.webp"
+
+      # ── Persistance (section 5 : les données sont conservées) ───────────────
+      - name: Persistance après docker compose down puis up
+        run: |
+          avant=$(jq '[.resultats[], .prochains[]] | length' accueil.json)
+          mini=$(jq -r '.club.logo_mini' accueil.json)
+          docker compose down
+          docker compose up -d
+          for i in $(seq 1 60); do curl -fsS "$BASE/api/health" >/dev/null 2>&1 && break; sleep 2; done
+          sleep 65   # au-delà du délai de rattrapage : aucun nouvel import attendu
+          docker compose logs backend | grep -E '\[(Schéma|Scheduler)\]' | tail -5
+          docker compose logs backend | grep -q 'Schéma vérifié'
+          docker compose logs backend | grep -q 'Rattrapage inutile'
+          apres=$(curl -fsS "$BASE/api/public/accueil" | jq '[.resultats[], .prochains[]] | length')
+          echo "matchs affichés avant : $avant, après : $apres"
+          test "$avant" = "$apres"
+          test "$(curl -fsS -o /dev/null -w '%{content_type}' "$BASE$mini")" = image/webp
+
+      - name: Journaux en cas d'échec
+        if: failure()
+        run: docker compose logs --no-color --tail 300
+
+      - name: Nettoyage
+        if: always()
+        run: docker compose down -v
