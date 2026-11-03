@@ -16,8 +16,9 @@
 const axios = require('axios');
 const pool  = require('../db');
 
-// API FFF DOFA (publique, sans authentification)
-const DOFA_BASE = 'https://api-dofa.fff.fr';
+// API FFF DOFA (publique, sans authentification).
+// DOFA_BASE : remplacée seulement par les tests (CI : réponses DOFA enregistrées, deploy/ci/)
+const DOFA_BASE = (process.env.DOFA_BASE || 'https://api-dofa.fff.fr').replace(/\/+$/, '');
 const SCR_CL_NO = 2131;   // Numéro interne FFF du SC Roeschwoog (≠ affiliation 504189)
 
 const DOFA_HEADERS = {

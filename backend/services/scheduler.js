@@ -6,7 +6,8 @@
  *
  *  - Verrou : une seule tâche FFF à la fois (planifiée, rattrapage ou manuelle) ;
  *    un déclenchement pendant une exécution est ignoré et journalisé.
- *  - Rattrapage : 60 s après le démarrage, si le dernier import réussi a plus de 24 h.
+ *  - Rattrapage : 60 s après le démarrage, si le dernier import réussi a plus de 24 h ;
+ *    relancé toutes les 30 min tant qu'aucun import n'a réussi (FFF injoignable, 403…).
  *  - Journal : table taches_log, purgée au-delà de 90 jours par l'import nocturne.
  *  - CRON_ENABLED=false : ni planning ni rattrapage (les routes manuelles restent actives).
  *
@@ -25,6 +26,8 @@ const TZ                   = 'Europe/Paris';
 const DECALAGE_MAX_MS      = 10 * 60 * 1000;
 const RATTRAPAGE_APRES_MS  = 60 * 1000;
 const RATTRAPAGE_SEUIL_H   = 24;
+// Relance du rattrapage tant qu'aucun import n'a réussi depuis 24 h (RATTRAPAGE_RELANCE_MIN : tests)
+const RELANCE_MS           = (parseFloat(process.env.RATTRAPAGE_RELANCE_MIN) || 30) * 60 * 1000;
 const RETENTION_JOURS      = 90;
 
 // Créneaux : import nocturne + fenêtre de publication des résultats FFF
@@ -52,6 +55,8 @@ const formatParis = (date) => new Intl.DateTimeFormat('fr-FR', {
 }).format(date);
 
 const formatDuree = (ms) => `${Math.floor(ms / 60000)} min ${Math.round((ms % 60000) / 1000)} s`;
+// Intervalle de relance : « 30 min » (ou « 0 min 15 s » en test)
+const formatIntervalle = (ms) => (ms % 60000 === 0 ? `${ms / 60000} min` : formatDuree(ms));
 
 class TacheEnCoursError extends Error {
   constructor(enCours) {
@@ -218,6 +223,38 @@ async function rattrapage() {
   return true;
 }
 
+// Un import a réussi il y a moins de RATTRAPAGE_SEUIL_H heures
+async function importRecent() {
+  const dernier = await dernierImportReussi();
+  return Boolean(dernier) && (Date.now() - new Date(dernier).getTime()) / 3600000 < RATTRAPAGE_SEUIL_H;
+}
+
+// Rattrapage dans `delaiMs`, puis relance toutes les `relanceMs` tant qu'aucun import n'a réussi
+function planifierRattrapage(delaiMs, relanceMs) {
+  const t = setTimeout(async () => {
+    minuteurs.delete(t);
+    try {
+      await rattrapage();
+    } catch (err) {
+      if (!(err instanceof TacheEnCoursError)) console.error('[Scheduler] Rattrapage :', err.message);
+    }
+
+    let ok = false;
+    try {
+      ok = await importRecent();
+    } catch (err) {
+      console.error('[Scheduler] Vérification du dernier import impossible :', err.message);
+    }
+    if (!ok) {
+      console.warn(`[Scheduler] ⏳ Aucun import FFF réussi : nouvelle tentative de rattrapage dans ${formatIntervalle(relanceMs)} ` +
+                   `(${formatParis(new Date(Date.now() + relanceMs))}). Cause : voir les lignes [FFF] ci-dessus ` +
+                   '(HTTP 403 répété = serveur bloqué par la FFF).');
+      planifierRattrapage(relanceMs, relanceMs);
+    }
+  }, delaiMs);
+  minuteurs.add(t);
+}
+
 // ── Planification ─────────────────────────────────────────────────────────────
 
 let taches   = [];
@@ -239,7 +276,7 @@ function declencher(creneau) {
   minuteurs.add(t);
 }
 
-function start({ rattrapageApresMs = RATTRAPAGE_APRES_MS } = {}) {
+function start({ rattrapageApresMs = RATTRAPAGE_APRES_MS, relanceMs = RELANCE_MS } = {}) {
   if (!cronActive()) {
     console.log('[Scheduler] ⏸️  Tâches planifiées désactivées (CRON_ENABLED=false) : ni planning ni rattrapage');
     return false;
@@ -251,15 +288,10 @@ function start({ rattrapageApresMs = RATTRAPAGE_APRES_MS } = {}) {
   CRENEAUX.forEach((c, i) => {
     console.log(`[Scheduler]    ${c.nom.padEnd(42)} ${c.cron.padEnd(16)} prochaine : ${formatParis(taches[i].getNextRun())}`);
   });
-  console.log(`[Scheduler]    Rattrapage dans ${rattrapageApresMs / 1000} s si le dernier import réussi a plus de ${RATTRAPAGE_SEUIL_H} h`);
+  console.log(`[Scheduler]    Rattrapage dans ${rattrapageApresMs / 1000} s si le dernier import réussi a plus de ${RATTRAPAGE_SEUIL_H} h` +
+              `, relancé toutes les ${formatIntervalle(relanceMs)} tant qu'aucun import ne réussit`);
 
-  const t = setTimeout(() => {
-    minuteurs.delete(t);
-    rattrapage().catch(err => {
-      if (!(err instanceof TacheEnCoursError)) console.error('[Scheduler] Rattrapage :', err.message);
-    });
-  }, rattrapageApresMs);
-  minuteurs.add(t);
+  planifierRattrapage(rattrapageApresMs, relanceMs);
 
   return true;
 }

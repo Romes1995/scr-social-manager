@@ -1,6 +1,11 @@
 # Test du déploiement « vitrine seule » en suivant deploy/DEPLOIEMENT.md :
 # cp .env.example .env, docker compose up -d --build, import FFF sur base vide,
 # pages et logos servis par Nginx, puis persistance après down / up.
+#
+# Les serveurs GitHub sont bloqués par la FFF (HTTP 403) : COMPOSE_FILE ajoute
+# docker-compose.ci.yml, qui rejoue des réponses DOFA réelles enregistrées
+# (deploy/ci/dofa/, backend/scripts/enregistrer-dofa-ci.js). Les commandes du
+# guide restent identiques ; seul l'accès réel à la FFF n'est pas testé ici.
 name: Vitrine Docker
 
 on:
@@ -32,6 +37,7 @@ jobs:
         working-directory: deploy
     env:
       BASE: http://127.0.0.1:8080
+      COMPOSE_FILE: docker-compose.yml:docker-compose.ci.yml
 
     steps:
       - uses: actions/checkout@v4
@@ -59,6 +65,9 @@ jobs:
             sleep 2
           done
           curl -fsS "$BASE/api/health" | jq -e '.status == "ok" and .mode == "vitrine"'
+
+      - name: Test FFF depuis le conteneur (scripts/tester-fff.js du guide)
+        run: docker compose exec -T backend node scripts/tester-fff.js
 
       - name: Routes d'administration absentes
         run: |

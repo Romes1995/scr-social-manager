@@ -87,6 +87,27 @@ Pour vérifier depuis le serveur, remplacez `8080` par votre `PORT_HTTP` :
 curl http://127.0.0.1:8080/api/health        # {"status":"ok","mode":"vitrine"}
 ```
 
+**Le serveur a le droit d'interroger la FFF.** Certains hébergeurs sont bloqués
+par la FFF. Ce test interroge la FFF depuis le conteneur, comme le fait l'import :
+
+```bash
+docker compose exec backend node scripts/tester-fff.js
+```
+
+| Résultat affiché                                         | Signification                                      |
+|----------------------------------------------------------|----------------------------------------------------|
+| `✅ API FFF joignable …` puis `✅ Logos des clubs accessibles …` | Tout va bien                                 |
+| `❌ Serveur bloqué par la FFF (HTTP 403) … Voir Romaric.`  | Ce serveur ne pourra pas importer les données : prévenir Romaric |
+| `❌ API FFF injoignable …`                                 | Problème réseau du serveur ; réessayer plus tard   |
+
+Si l'import échoue, par exemple parce que la FFF bloque le serveur, le backend
+réessaie toutes les 30 minutes jusqu'à ce qu'un import réussisse. Le journal
+l'indique par cette ligne :
+
+```
+[Scheduler] ⏳ Aucun import FFF réussi : nouvelle tentative de rattrapage dans 30 min (…)
+```
+
 **Les pages du site** (remplacer par votre adresse) :
 
 | Page                                | Adresse                            |
@@ -158,8 +179,8 @@ docker compose exec postgres psql -U scr -d scr_vitrine \
 
 | Symptôme                                         | Piste                                                                 |
 |--------------------------------------------------|-----------------------------------------------------------------------|
-| Le site s'affiche, mais sans matchs              | Lire `docker compose logs backend`. L'import démarre environ 1 minute après le lancement. |
-| `HTTP 403` ou délais dépassés vers `api-dofa.fff.fr` | La FFF bloque parfois des adresses IP de serveurs (protection Akamai). L'import réessaie au créneau suivant. Si ça persiste, vérifier depuis le serveur : `curl -I https://api-dofa.fff.fr`. |
+| Le site s'affiche, mais sans matchs              | Lire `docker compose logs backend`. L'import démarre environ 1 minute après le lancement. Lancer aussi le test FFF (section 3). |
+| `HTTP 403` vers `api-dofa.fff.fr`, lignes `⏳ Aucun import FFF réussi` | La FFF bloque peut-être ce serveur. Lancer `docker compose exec backend node scripts/tester-fff.js`. S'il affiche « Serveur bloqué par la FFF », prévenir Romaric. Un 403 isolé est normal : l'import réessaie toutes les 30 min. |
 | Un logo de club manque (pastille vide)           | Chercher `[LogosFFF]` dans le journal. L'échec est noté et retenté au prochain import. |
 | `POSTGRES_PASSWORD manquant`                     | Le fichier `deploy/.env` n'existe pas : `cp .env.example .env`.       |
 | Port déjà utilisé                                | Changer `PORT_HTTP` dans `.env`, puis `docker compose up -d`.         |
