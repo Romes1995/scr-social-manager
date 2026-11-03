@@ -18,6 +18,7 @@ const cron = require('node-cron');
 const pool = require('../db');
 const { importFFF } = require('./fffImport');
 const { refreshClassements } = require('./fffClassement');
+const { resumeLogos } = require('./logosFff');
 const { invaliderCache: invaliderCacheAccueil } = require('./accueilPublic');
 
 const TZ                   = 'Europe/Paris';
@@ -126,6 +127,7 @@ const resumeImport = (report) => ({
     crees: report.clubs.crees.length, rattaches: report.clubs.rattaches.length,
     renommes: report.clubs.renommes.length, ambigus: report.clubs.ambigus.length,
   },
+  logos:          resumeLogos(report.logos),
 });
 
 const resumeClassements = (result) => {
@@ -134,7 +136,7 @@ const resumeClassements = (result) => {
   for (const [equipe, e] of Object.entries(result.equipes)) {
     if (e.ok) ok.push(equipe); else ko[equipe] = e.erreur;
   }
-  return { saison: result.saison, ok, ko };
+  return { saison: result.saison, ok, ko, logos: resumeLogos(result.logos) };
 };
 
 const importReussi     = (r) => r.ok && r.erreurs === 0 && r.ambigus === 0;

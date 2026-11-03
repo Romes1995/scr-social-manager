@@ -1,4 +1,6 @@
 -- SCR Social Manager - Schema PostgreSQL
+-- Rejoué à chaque démarrage par database/initSchema.js : chaque instruction doit
+-- rester idempotente (IF NOT EXISTS, DO … EXCEPTION WHEN duplicate_object).
 -- L'ordre des colonnes reproduit celui de la base actuelle (colonnes
 -- ajoutées par migration en fin de table) : pg_dump -s des deux bases est identique.
 
@@ -18,6 +20,8 @@ CREATE TABLE IF NOT EXISTS clubs (
   drive_folder_id VARCHAR(100),                 -- lien permanent (renommage sans effet)
   drive_folder_nom VARCHAR(200),                -- nom lors de la dernière synchro
   drive_folder_manuel BOOLEAN NOT NULL DEFAULT false,  -- choisi dans l'admin : jamais remplacé
+  -- Copie locale du logo FFF (migrations/007_logo_fff_local.sql)
+  logo_fff_local TEXT,                          -- /uploads/logos/fff-<cl_no>.<ext>
   CONSTRAINT clubs_fff_cl_no_key UNIQUE (fff_cl_no),
   CONSTRAINT clubs_drive_folder_id_key UNIQUE (drive_folder_id)
 );
@@ -168,8 +172,13 @@ CREATE TABLE IF NOT EXISTS publications_historique (
   CONSTRAINT hist_statut_check   CHECK (statut IN ('publie', 'erreur', 'mock', 'test'))
 );
 
-CREATE TYPE logo_variante AS ENUM ('classique', 'octobre_rose', 'monochrome');
-CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live');
+-- Types énumérés : CREATE TYPE n'a pas de IF NOT EXISTS (schéma rejoué à chaque démarrage)
+DO $$ BEGIN
+  CREATE TYPE logo_variante AS ENUM ('classique', 'octobre_rose', 'monochrome');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+DO $$ BEGIN
+  CREATE TYPE user_role AS ENUM ('admin', 'gestionnaire', 'coach', 'score_live');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 CREATE TABLE IF NOT EXISTS users (
   id            SERIAL PRIMARY KEY,

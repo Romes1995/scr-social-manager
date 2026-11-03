@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import './theme.css';
+import { VITRINE } from './config/mode';
 import Navbar     from './components/Navbar';
 import Accueil    from './accueil/Accueil';
 import ScoreLive  from './pages/ScoreLive';
@@ -20,9 +21,10 @@ function AppRoutes() {
         <Route path="/"           element={<Accueil />} />
         {/* Ancienne vitrine 3 colonnes : remplacée par la page télé */}
         <Route path="/vitrine"    element={<Navigate to={`/tele${search}`} replace />} />
-        <Route path="/live"       element={<ScoreLive />} />
+        {/* Mode vitrine : pas de score live ni de buteurs (données de l'admin) */}
+        <Route path="/live"       element={VITRINE ? <Navigate to="/" replace /> : <ScoreLive />} />
         <Route path="/matchs"     element={<Matchs />} />
-        <Route path="/buteurs"    element={<Buteurs />} />
+        <Route path="/buteurs"    element={VITRINE ? <Navigate to="/" replace /> : <Buteurs />} />
         <Route path="/classement" element={<Classement />} />
         <Route path="/tele"       element={<Tele />} />
       </Routes>

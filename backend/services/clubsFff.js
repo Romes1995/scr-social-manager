@@ -169,8 +169,9 @@ const sqlLogoParNom = (colNom) => `(SELECT ${sqlLogoClub('c')} FROM clubs c
     WHERE LOWER(TRIM(c.nom)) = LOWER(TRIM(${colNom})) AND ${sqlLogoClub('c')} IS NOT NULL
     LIMIT 1)`;
 
-// Logo adverse : cl_no, puis nom, puis logo FFF du match (requiert SQL_JOIN_CLUB_ADVERSAIRE)
-const SQL_LOGO_ADVERSAIRE = `COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('m.adversaire')}, m.logo_adversaire)`;
+// Logo adverse : cl_no, puis nom, puis copie locale du logo FFF (services/logosFff.js),
+// puis logo FFF du match (requiert SQL_JOIN_CLUB_ADVERSAIRE)
+const SQL_LOGO_ADVERSAIRE = `COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('m.adversaire')}, ca.logo_fff_local, m.logo_adversaire)`;
 
 // Logo local seul (champ historique logo_adversaire_local : sans repli sur le logo FFF)
 const SQL_LOGO_ADVERSAIRE_LOCAL = `COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('m.adversaire')})`;

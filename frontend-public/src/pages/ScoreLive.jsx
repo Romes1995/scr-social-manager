@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getScoreLive, getPublicMatchs, API_BASE_URL } from '../services/api';
+import { getScoreLive, getPublicMatchs, urlImage } from '../services/api';
 
 function formatMinute(updatedAt) {
   if (!updatedAt) return '';
@@ -13,9 +13,7 @@ function formatDate(d) {
 }
 
 function MatchCard({ match }) {
-  const logoUrl = match.logo_adversaire_local
-    ? `${API_BASE_URL}/${match.logo_adversaire_local}`
-    : null;
+  const logoUrl = urlImage(match.logo_adversaire_local) || null;
   const isHome = match.domicile;
 
   const teamSCR  = { name: match.equipe,     score: match.score_scr, logo: null };

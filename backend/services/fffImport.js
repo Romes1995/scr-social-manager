@@ -349,6 +349,7 @@ async function importFFF({ dryRun = false } = {}) {
     total: matchs.length,
     created: [], updated: [], scoreChanges: [], ambiguous: [], errors: [],
     clubs: null,
+    logos: null,
     skipped,
     matchs,
   };
@@ -411,6 +412,20 @@ async function importFFF({ dryRun = false } = {}) {
     report.clubs = await assurerClubs(matchs.map(m => ({
       cl_no: m.adversaire_cl_no, nom: m.adversaire, autresNoms: m.adversaire_noms,
     })));
+
+    // Logos FFF en local + miniatures (adversaires et SCR) : un échec n'arrête pas l'import
+    const { assurerLogosFff } = require('./logosFff');
+    const cotesScr = rawMatches.flatMap(r => [r.home, r.away]).filter(s => s?.club?.cl_no === SCR_CL_NO);
+    const logoScr  = cotesScr.find(s => s.club.logo)?.club.logo || null;
+    try {
+      report.logos = await assurerLogosFff([
+        { cl_no: SCR_CL_NO, url: logoScr, nom: 'SCR', scr: true },
+        ...matchs.map(m => ({ cl_no: m.adversaire_cl_no, url: m.logo_adversaire, nom: m.adversaire })),
+      ]);
+    } catch (err) {
+      report.logos = { telecharges: [], existants: [], echecs: [{ cl_no: null, nom: null, erreur: err.message }] };
+      console.error('[FFF] Logos FFF :', err.message);
+    }
   }
 
   console.log(

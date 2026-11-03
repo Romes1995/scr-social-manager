@@ -19,6 +19,7 @@ const pool = require('../db');
 const club = require('../config/club');
 const { lireClassements, saisonCourante } = require('./fffClassement');
 const { miniSiDisponible } = require('../utils/logoMini');
+const { logoScr } = require('./logosFff');
 const {
   nommerAdversaire, SQL_JOIN_CLUB_ADVERSAIRE, SQL_LOGO_ADVERSAIRE, SQL_NOMS_ADVERSAIRE,
 } = require('./clubsFff');
@@ -81,7 +82,8 @@ const heureCourte = (h) => (h ? String(h).slice(0, 5) : null);
 
 // ── Requêtes ──────────────────────────────────────────────────────────────────
 
-// Logo adversaire : logo local (clubs, par cl_no puis par nom) sinon logo FFF du match.
+// Logo adversaire : logo local (clubs, par cl_no puis par nom) sinon logo FFF du match ;
+// logo_fff : logo FFF du match seul (repli de la vitrine quand la miniature manque).
 // Les logos temporaires (Octobre Rose…) sont volontairement ignorés.
 // Nom adversaire : nom d'affichage du club (clubsFff.nomClub), appliqué par nommerAdversaire().
 
@@ -94,6 +96,7 @@ const SQL_PREMIER_JOUR = `
 const SQL_PROCHAINS = `
   SELECT m.equipe, m.division, m.competition_type, m.journee, m.date, m.heure, m.domicile,
          m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
+         m.logo_adversaire AS logo_fff,
          m.terrain_nom, m.terrain_adresse, m.terrain_cp, m.terrain_ville, m.reporte
     FROM matches m
     ${SQL_JOIN_CLUB_ADVERSAIRE}
@@ -105,6 +108,7 @@ const SQL_RESULTATS = `
   SELECT DISTINCT ON (m.equipe)
          m.equipe, m.division, m.competition_type, m.date, m.domicile,
          m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
+         m.logo_adversaire AS logo_fff,
          m.score_scr, m.score_adv, m.tab_domicile, m.tab_exterieur
     FROM matches m
     ${SQL_JOIN_CLUB_ADVERSAIRE}
@@ -116,6 +120,7 @@ const SQL_RESULTATS_TELE = `
   SELECT * FROM (
     SELECT m.equipe, m.division, m.competition_type, m.journee, m.date, m.domicile,
            m.adversaire, m.adversaire_equipe_no, ${SQL_NOMS_ADVERSAIRE}, ${SQL_LOGO_ADVERSAIRE} AS logo,
+           m.logo_adversaire AS logo_fff,
            m.score_scr, m.score_adv, m.tab_domicile, m.tab_exterieur,
            ROW_NUMBER() OVER (PARTITION BY m.equipe ORDER BY m.date DESC, m.heure DESC NULLS LAST) AS n
       FROM matches m
@@ -157,6 +162,7 @@ function formaterProchain(ligne) {
     adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
     logo_adversaire_mini: miniSiDisponible(r.logo),   // 64 px, logos locaux seulement
+    logo_adversaire_fff:  r.logo_fff,                 // logo FFF externe (repli sans miniature)
     ...equipesDuMatch(r),
     terrain,
     lien_itineraire:   lienItineraire(terrain),
@@ -188,6 +194,7 @@ function formaterResultat(ligne) {
     adversaire_court:  r.adversaire_court,
     logo_adversaire:   r.logo,
     logo_adversaire_mini: miniSiDisponible(r.logo),
+    logo_adversaire_fff:  r.logo_fff,
     ...equipesDuMatch(r),
     score_domicile:    r.domicile ? r.score_scr : r.score_adv,
     score_exterieur:   r.domicile ? r.score_adv : r.score_scr,
@@ -214,6 +221,7 @@ function formaterClassements(classements) {
         nom_court:      r.equipe_court,
         logo:           r.logo,
         logo_mini:      miniSiDisponible(r.logo),
+        logo_fff:       r.logo_fff,       // logo FFF externe (repli sans miniature)
         points:         r.points,
         joues:          r.joues,
         victoires:      r.victoires,
@@ -254,10 +262,12 @@ async function prochainsEtFenetre(aujourdhui) {
   return { prochains: prochains.map(formaterProchain), fenetre };
 }
 
-// Identité du club ; logo : logo SCR enregistré dans l'admin, logo_mini : sa miniature 64 px
-function infosClub(aujourdhui) {
+// Identité du club ; logo : logo SCR de l'admin, sinon copie locale du logo FFF
+// (services/logosFff.logoScr) ; logo_mini : sa miniature 64 px ; logo_fff : logo FFF externe
+async function infosClub(aujourdhui) {
   const saison = saisonCourante(new Date(`${aujourdhui}T12:00:00Z`));
-  return { nom: club.nom, logo: club.logo, logo_mini: miniSiDisponible(club.logo), saison: `${saison}-${saison + 1}` };
+  const { logo, logo_fff } = await logoScr();
+  return { nom: club.nom, logo, logo_mini: miniSiDisponible(logo), logo_fff, saison: `${saison}-${saison + 1}` };
 }
 
 /**
@@ -272,7 +282,7 @@ async function construireAccueil({ aujourdhui = dateParis() } = {}) {
   ]);
 
   return {
-    club:        infosClub(aujourdhui),
+    club:        await infosClub(aujourdhui),
     prochains,
     fenetre,
     resultats:   resultats.rows.map(formaterResultat),
@@ -297,7 +307,7 @@ async function construireTele({ aujourdhui = dateParis() } = {}) {
   const equipes = [...new Set([...club.equipes, ...Object.keys(parEquipe)])].sort();
 
   return {
-    club: infosClub(aujourdhui),
+    club: await infosClub(aujourdhui),
     prochains,
     fenetre,
     equipes: equipes.map(equipe => ({
