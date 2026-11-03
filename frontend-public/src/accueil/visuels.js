@@ -33,13 +33,15 @@ export const VISUELS = {
 };
 
 /**
- * Source du logo d'un club dans une pastille. Le backend donne en priorité le logo
- * de la base (admin, visuels Match Day / Résultats), SCR compris, et le logo FFF
- * en dernier recours : on prend la miniature 64 px du logo de la base, sinon le
- * logo FFF externe (déjà léger). Jamais un logo local en taille réelle (plusieurs Mo).
+ * Source du logo d'un club dans une pastille : miniature 64 px du logo de la base
+ * (admin, visuels Match Day / Résultats), sinon logo FFF externe (déjà léger), sinon
+ * pastille vide. `logo_fff` est le logo FFF du club, fourni par le backend même quand
+ * `logo` est un logo local ; `logo` reste lu s'il est lui-même externe.
+ * Jamais un logo local en taille réelle (plusieurs Mo).
  */
-export function logoPastille({ mini = null, logo = null } = {}) {
+const externe = (url) => (url && /^https?:\/\//.test(url) ? url : null);
+
+export function logoPastille({ mini = null, logo = null, fff = null } = {}) {
   if (mini) return urlImage(mini);
-  if (logo && /^https?:\/\//.test(logo)) return logo;
-  return null;
+  return externe(fff) || externe(logo);
 }

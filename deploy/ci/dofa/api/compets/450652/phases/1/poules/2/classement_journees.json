@@ -1,0 +1,548 @@
+{
+ "@context": "/api/contexts/ClassementJournee",
+ "@id": "/api/compets/450652/phases/1/poules/2/classement_journees",
+ "@type": "hydra:Collection",
+ "hydra:member": [
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 18,
+   "penalty_point_count": 0,
+   "won_games_count": 6,
+   "draw_games_count": 0,
+   "lost_games_count": 1,
+   "forfeits_games_count": 0,
+   "goals_for_count": 21,
+   "goals_against_count": 14,
+   "rank": 1,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 4590,
+     "external_updated_at": "2026-09-25T23:02:00+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "LA WANTZENAU F.C",
+    "short_name_ligue": "LA WANTZENAU FC",
+    "short_name_federation": "LA WANTZENAU FC",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:22:52+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 7,
+   "total_games_count": 7,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 15,
+   "penalty_point_count": 0,
+   "won_games_count": 5,
+   "draw_games_count": 0,
+   "lost_games_count": 2,
+   "forfeits_games_count": 0,
+   "goals_for_count": 18,
+   "goals_against_count": 6,
+   "rank": 2,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 2020,
+     "external_updated_at": "2026-08-24T14:22:39+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "WEITBRUCH F.C",
+    "short_name_ligue": "WEITBRUCH FC",
+    "short_name_federation": "WEITBRUCH FC",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:21:10+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 12,
+   "total_games_count": 7,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 14,
+   "penalty_point_count": 1,
+   "won_games_count": 5,
+   "draw_games_count": 0,
+   "lost_games_count": 2,
+   "forfeits_games_count": 0,
+   "goals_for_count": 23,
+   "goals_against_count": 14,
+   "rank": 3,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 11559,
+     "external_updated_at": "2026-08-24T14:38:49+00:00"
+    },
+    "category_code": "SEM",
+    "number": 4,
+    "code": 2,
+    "short_name": "OBERLAUTERBACH U.S",
+    "short_name_ligue": "OBERLAUTERBACH US",
+    "short_name_federation": "OBERLAUTERBACH US",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:25:25+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 9,
+   "total_games_count": 7,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 13,
+   "penalty_point_count": 0,
+   "won_games_count": 4,
+   "draw_games_count": 1,
+   "lost_games_count": 1,
+   "forfeits_games_count": 0,
+   "goals_for_count": 8,
+   "goals_against_count": 4,
+   "rank": 4,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 1998,
+     "external_updated_at": "2026-08-24T12:23:27+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "HERRLISHEIM F.C",
+    "short_name_ligue": "HERRLISHEIM FC",
+    "short_name_federation": "HERRLISHEIM FC",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:21:08+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 4,
+   "total_games_count": 6,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 12,
+   "penalty_point_count": 0,
+   "won_games_count": 4,
+   "draw_games_count": 0,
+   "lost_games_count": 2,
+   "forfeits_games_count": 0,
+   "goals_for_count": 13,
+   "goals_against_count": 8,
+   "rank": 5,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 2131,
+     "external_updated_at": "2026-10-23T21:55:49+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "ROESCHWOOG S.C",
+    "short_name_ligue": "ROESCHWOOG SC",
+    "short_name_federation": "ROESCHWOOG SC",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:21:18+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 5,
+   "total_games_count": 6,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 12,
+   "penalty_point_count": 0,
+   "won_games_count": 4,
+   "draw_games_count": 0,
+   "lost_games_count": 2,
+   "forfeits_games_count": 0,
+   "goals_for_count": 12,
+   "goals_against_count": 10,
+   "rank": 6,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 12450,
+     "external_updated_at": "2026-08-24T14:39:39+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "BISCHWILLER TURCS",
+    "short_name_ligue": "BISCHWILLER TURCS",
+    "short_name_federation": "BISCHWILLER TURCS",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:25:43+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 2,
+   "total_games_count": 6,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 9,
+   "penalty_point_count": 0,
+   "won_games_count": 3,
+   "draw_games_count": 0,
+   "lost_games_count": 4,
+   "forfeits_games_count": 0,
+   "goals_for_count": 11,
+   "goals_against_count": 14,
+   "rank": 7,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 2117,
+     "external_updated_at": "2026-10-29T14:14:27+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "STRG NEUHOF C.S",
+    "short_name_ligue": "STRG NEUHOF CS",
+    "short_name_federation": "STRG NEUHOF CS",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:21:16+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 3,
+   "total_games_count": 7,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 9,
+   "penalty_point_count": 0,
+   "won_games_count": 3,
+   "draw_games_count": 0,
+   "lost_games_count": 4,
+   "forfeits_games_count": 0,
+   "goals_for_count": 14,
+   "goals_against_count": 20,
+   "rank": 8,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 12451,
+     "external_updated_at": "2026-09-07T20:03:39+00:00"
+    },
+    "category_code": "SEM",
+    "number": 3,
+    "code": 2,
+    "short_name": "BISCHHEIM SOLEIL F.C",
+    "short_name_ligue": "BISCHHEIM SOLEIL FC",
+    "short_name_federation": "BISCHHEIM SOLEIL FC",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:25:44+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 6,
+   "total_games_count": 7,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 8,
+   "penalty_point_count": 0,
+   "won_games_count": 2,
+   "draw_games_count": 2,
+   "lost_games_count": 2,
+   "forfeits_games_count": 0,
+   "goals_for_count": 16,
+   "goals_against_count": 13,
+   "rank": 9,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 3364,
+     "external_updated_at": "2026-08-24T12:26:27+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "BEINHEIM S.S.",
+    "short_name_ligue": "BEINHEIM S.S.",
+    "short_name_federation": "BEINHEIM S.S.",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:22:05+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 3,
+   "total_games_count": 6,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 4,
+   "penalty_point_count": 0,
+   "won_games_count": 1,
+   "draw_games_count": 1,
+   "lost_games_count": 5,
+   "forfeits_games_count": 0,
+   "goals_for_count": 15,
+   "goals_against_count": 19,
+   "rank": 10,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 6441,
+     "external_updated_at": "2026-08-24T12:32:43+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "MOTHERN F.C",
+    "short_name_ligue": "MOTHERN FC",
+    "short_name_federation": "MOTHERN FC",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:23:49+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 4,
+   "total_games_count": 7,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 3,
+   "penalty_point_count": 0,
+   "won_games_count": 1,
+   "draw_games_count": 0,
+   "lost_games_count": 6,
+   "forfeits_games_count": 0,
+   "goals_for_count": 13,
+   "goals_against_count": 22,
+   "rank": 11,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 3487,
+     "external_updated_at": "2026-08-24T14:25:47+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "STRG NEUDORF A.S",
+    "short_name_ligue": "STRG NEUDORF AS",
+    "short_name_federation": "STRG NEUDORF AS",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:22:10+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 9,
+   "total_games_count": 7,
+   "is_forfait": false
+  },
+  {
+   "season": 2026,
+   "date": "2026-11-02T00:00:00+00:00",
+   "cj_no": 7,
+   "type": "J",
+   "point_count": 0,
+   "penalty_point_count": 0,
+   "won_games_count": 0,
+   "draw_games_count": 0,
+   "lost_games_count": 7,
+   "forfeits_games_count": 0,
+   "goals_for_count": 4,
+   "goals_against_count": 24,
+   "rank": 12,
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "cdg": {
+     "cg_no": 2,
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false
+   },
+   "equipe": {
+    "club": {
+     "cl_no": 3455,
+     "external_updated_at": "2026-09-26T11:31:43+00:00"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "MUNDOLSHEIM A.S",
+    "short_name_ligue": "MUNDOLSHEIM AS",
+    "short_name_federation": "MUNDOLSHEIM AS",
+    "type": "C",
+    "external_updated_at": "2026-08-27T14:22:09+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "external_updated_at": "2026-11-01T18:39:40+00:00",
+   "goals_diff": 20,
+   "total_games_count": 7,
+   "is_forfait": false
+  }
+ ],
+ "hydra:totalItems": 12
+}

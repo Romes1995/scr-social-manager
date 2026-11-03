@@ -26,7 +26,7 @@ export default function Accueil() {
 
   const { statut, data } = etat;
   // Logo SCR des pastilles : celui enregistré dans l'admin (miniature servie par l'API)
-  const logoScr = data ? logoPastille({ mini: data.club?.logo_mini, logo: data.club?.logo }) : null;
+  const logoScr = data ? logoPastille({ mini: data.club?.logo_mini, logo: data.club?.logo, fff: data.club?.logo_fff }) : null;
 
   return (
     <div className="acc">

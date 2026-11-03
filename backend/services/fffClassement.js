@@ -223,7 +223,23 @@ async function refreshClassements({ fetcher = fetchClassementDOFA } = {}) {
                 `${clubs.renommes.length} renommé(s), ${clubs.ambigus.length} ambigu(s)`);
   }
 
-  return { saison, equipes, clubs };
+  // Logos FFF en local + miniatures : URL du logo vu dans les matchs (par cl_no),
+  // sinon fiche club DOFA (les classements DOFA ne donnent pas de logo)
+  let logosFff = null;
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT ON (adversaire_cl_no) adversaire_cl_no, logo_adversaire
+         FROM matches
+        WHERE adversaire_cl_no IS NOT NULL AND logo_adversaire IS NOT NULL
+        ORDER BY adversaire_cl_no, date DESC`);
+    const urlParClNo = new Map(rows.map(r => [r.adversaire_cl_no, r.logo_adversaire]));
+    const { assurerLogosFff } = require('./logosFff');
+    logosFff = await assurerLogosFff(clubsVus.map(c => ({ cl_no: c.cl_no, nom: c.nom, url: urlParClNo.get(c.cl_no) || null })));
+  } catch (err) {
+    console.error('[Classement] Logos FFF :', err.message);
+  }
+
+  return { saison, equipes, clubs, logos: logosFff };
 }
 
 // ── Lecture (routes publiques) ────────────────────────────────────────────────
@@ -238,20 +254,22 @@ const MESSAGE_ABSENT = 'Classement pas encore récupéré depuis la FFF';
  */
 async function lireClassements({ equipe = null } = {}) {
   const saison = saisonCourante();
+  const scr = await require('./logosFff').logoScr();
 
   const { rows } = await pool.query(
-    // Logo affiché : logo du club SCR (config/club.js) pour SCR ; sinon logo local
-    // (clubs, par cl_no puis par nom comme les matchs) ; à défaut, logo FFF stocké.
+    // Logo affiché : logo du club SCR (accueilPublic.logoScr) pour SCR ; sinon logo local
+    // (clubs, par cl_no puis par nom comme les matchs), puis copie locale du logo FFF
+    // (logo_fff_local) ; à défaut, logo FFF stocké.
     `SELECT cl.*,
             CASE WHEN cl.is_scr THEN $3
-                 ELSE COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('cl.club')}, cl.logo_url)
+                 ELSE COALESCE(${sqlLogoClub('ca')}, ${sqlLogoParNom('cl.club')}, ca.logo_fff_local, cl.logo_url)
             END AS logo_affiche,
             ca.nom_affiche AS ca_nom_affiche, ca.nom_court AS ca_nom_court, ca.nom_fff AS ca_nom_fff
        FROM classements cl
        LEFT JOIN clubs ca ON ca.id = ${sqlClubParClNo('cl.club_cl_no')} AND NOT cl.is_scr
       WHERE cl.saison = $1 AND ($2::text IS NULL OR cl.equipe = $2)
       ORDER BY cl.equipe, cl.rang`,
-    [saison, equipe, club.logo]
+    [saison, equipe, scr.logo]
   );
 
   const result = {};
@@ -285,6 +303,7 @@ async function lireClassements({ equipe = null } = {}) {
       club:        r.club,
       club_equipe_no: r.club_equipe_no,
       logo:        r.logo_affiche,
+      logo_fff:    r.is_scr ? scr.logo_fff : r.logo_url,   // logo FFF externe (repli sans miniature)
       points:      r.points,
       joues:       r.joues,
       victoires:   r.victoires,

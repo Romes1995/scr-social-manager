@@ -1,0 +1,16 @@
+# CI uniquement (.github/workflows/vitrine-docker.yml) : les serveurs GitHub sont bloqués
+# par la FFF (HTTP 403). L'import lit ici les réponses DOFA enregistrées (deploy/ci/dofa/,
+# backend/scripts/enregistrer-dofa-ci.js). Jamais utilisé par un déploiement réel.
+services:
+  dofa-mock:
+    image: nginx:1.27-alpine
+    volumes:
+      - ./ci/dofa:/usr/share/nginx/html:ro
+      - ./ci/dofa-mock.conf:/etc/nginx/conf.d/default.conf:ro
+
+  backend:
+    environment:
+      DOFA_BASE: http://dofa-mock
+    depends_on:
+      dofa-mock:
+        condition: service_started

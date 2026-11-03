@@ -1,0 +1,685 @@
+{
+ "@context": "/api/contexts/MatchEntity",
+ "@id": "/api/match_entities",
+ "@type": "hydra:Collection",
+ "hydra:member": [
+  {
+   "ma_no": 56178266,
+   "competition": {
+    "cp_no": 450672,
+    "season": 2026,
+    "type": "CH",
+    "name": "District 4 Alsace",
+    "level": "D",
+    "cdg": {
+     "cg_no": 2,
+     "name": "DISTRICT D'ALSACE",
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T17:54:01+00:00"
+   },
+   "phase": {
+    "number": 1,
+    "type": "CH",
+    "name": "Phase 1",
+    "external_updated_at": "2026-08-26T14:30:43+00:00"
+   },
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "external_updated_at": "2026-08-27T12:07:05+00:00",
+    "poule_unique": false,
+    "at_least_one_match_resultat": true
+   },
+   "poule_journee": {
+    "number": 22,
+    "external_updated_at": "2026-08-27T12:21:27+00:00",
+    "name": "22"
+   },
+   "home": {
+    "club": {
+     "cl_no": 2131,
+     "external_updated_at": "2026-10-23T21:55:49+00:00",
+     "logo": "http://dofa-mock/phlogos/BC504189.jpg"
+    },
+    "category_code": "SEM",
+    "number": 2,
+    "code": 2,
+    "short_name": "ROESCHWOOG S.C",
+    "short_name_ligue": "ROESCHWOOG SC",
+    "short_name_federation": "ROESCHWOOG SC",
+    "type": "C",
+    "engagements": [
+     {
+      "competition": {
+       "cp_no": 450672,
+       "season": 2026,
+       "type": "CH",
+       "name": "District 4 Alsace",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-08-27T17:54:01+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458101,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe des Réserves Alsace Vivialys",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:43+00:00"
+      }
+     }
+    ],
+    "external_updated_at": "2026-08-27T14:21:18+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "away": {
+    "club": {
+     "cl_no": 12450,
+     "external_updated_at": "2026-08-24T14:39:39+00:00",
+     "logo": "http://dofa-mock/phlogos/BC528843.jpg"
+    },
+    "category_code": "SEM",
+    "number": 2,
+    "code": 2,
+    "short_name": "BISCHWILLER TURCS",
+    "short_name_ligue": "BISCHWILLER TURCS",
+    "short_name_federation": "BISCHWILLER TURCS",
+    "type": "C",
+    "engagements": [
+     {
+      "competition": {
+       "cp_no": 450672,
+       "season": 2026,
+       "type": "CH",
+       "name": "District 4 Alsace",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-08-27T17:54:01+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458101,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe des Réserves Alsace Vivialys",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:43+00:00"
+      }
+     }
+    ],
+    "external_updated_at": "2026-08-27T14:25:43+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "terrain": {
+    "te_no": 674050101,
+    "name": "STADE JEAN PIERRE 1",
+    "zip_code": "67480",
+    "city": "ROESCHWOOG",
+    "libelle_surface": "Pelouse Naturelle",
+    "external_updated_at": "2026-06-24T12:47:30+00:00",
+    "address": "RUE DU STADE"
+   },
+   "season": 2026,
+   "status": "A",
+   "ma_ar": "R",
+   "ma_inver": "N",
+   "ma_arret": "N",
+   "is_overtime": "N",
+   "date": "2027-05-30T00:00:00+00:00",
+   "time": "10H00",
+   "initial_date": null,
+   "cr_eq_naff": null,
+   "home_resu": "",
+   "cr_nb_but": null,
+   "home_score": null,
+   "home_but_contre": null,
+   "home_nb_point": null,
+   "home_nb_tir_but": null,
+   "home_nb_point_pena": null,
+   "home_is_forfeit": "N",
+   "cv_eq_naff": null,
+   "away_resu": "",
+   "away_nb_but": null,
+   "away_score": null,
+   "away_but_contre": null,
+   "away_nb_point": null,
+   "away_nb_tir_but": null,
+   "away_nb_point_pena": null,
+   "away_is_forfeit": "N",
+   "seems_postponed": "",
+   "match_feuille": null,
+   "external_updated_at": "2026-08-27T16:42:46+00:00",
+   "status_label": "/"
+  },
+  {
+   "ma_no": 56178202,
+   "competition": {
+    "cp_no": 450672,
+    "season": 2026,
+    "type": "CH",
+    "name": "District 4 Alsace",
+    "level": "D",
+    "cdg": {
+     "cg_no": 2,
+     "name": "DISTRICT D'ALSACE",
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T17:54:01+00:00"
+   },
+   "phase": {
+    "number": 1,
+    "type": "CH",
+    "name": "Phase 1",
+    "external_updated_at": "2026-08-26T14:30:43+00:00"
+   },
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "external_updated_at": "2026-08-27T12:07:05+00:00",
+    "poule_unique": false,
+    "at_least_one_match_resultat": true
+   },
+   "poule_journee": {
+    "number": 12,
+    "external_updated_at": "2026-08-27T12:21:26+00:00",
+    "name": "12"
+   },
+   "home": {
+    "club": {
+     "cl_no": 2121,
+     "external_updated_at": "2026-10-16T15:01:42+00:00",
+     "logo": "http://dofa-mock/phlogos/BC504177.jpg"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "OBERHOFFEN F.C",
+    "short_name_ligue": "OBERHOFFEN FC",
+    "short_name_federation": "OBERHOFFEN FC",
+    "type": "C",
+    "engagements": [
+     {
+      "competition": {
+       "cp_no": 449168,
+       "season": 2026,
+       "type": "CP",
+       "name": "COUPE DE FRANCE CRÉDIT AGRICOLE",
+       "level": "F",
+       "cdg": {
+        "cg_no": 0,
+        "name": "FEDERATION FRANCAISE DE FOOTBALL",
+        "external_updated_at": "2026-11-02T19:26:31+00:00"
+       },
+       "external_updated_at": "2026-10-29T11:40:48+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 450672,
+       "season": 2026,
+       "type": "CH",
+       "name": "District 4 Alsace",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-08-27T17:54:01+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458091,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe d'Alsace Intermarché",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:43+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458682,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe Crédit Mutuel Haguenau",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:44+00:00"
+      }
+     }
+    ],
+    "external_updated_at": "2026-08-27T14:21:17+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "away": {
+    "club": {
+     "cl_no": 2131,
+     "external_updated_at": "2026-10-23T21:55:49+00:00",
+     "logo": "http://dofa-mock/phlogos/BC504189.jpg"
+    },
+    "category_code": "SEM",
+    "number": 2,
+    "code": 2,
+    "short_name": "ROESCHWOOG S.C",
+    "short_name_ligue": "ROESCHWOOG SC",
+    "short_name_federation": "ROESCHWOOG SC",
+    "type": "C",
+    "engagements": [
+     {
+      "competition": {
+       "cp_no": 450672,
+       "season": 2026,
+       "type": "CH",
+       "name": "District 4 Alsace",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-08-27T17:54:01+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458101,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe des Réserves Alsace Vivialys",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:43+00:00"
+      }
+     }
+    ],
+    "external_updated_at": "2026-08-27T14:21:18+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "terrain": {
+    "te_no": 673450101,
+    "name": "STADE MUNICIPAL",
+    "zip_code": "67240",
+    "city": "OBERHOFFEN SUR MODER",
+    "libelle_surface": "Synthétique",
+    "external_updated_at": "2026-06-07T08:08:30+00:00",
+    "address": "16 RUE DE LA FORET"
+   },
+   "season": 2026,
+   "status": "A",
+   "ma_ar": "R",
+   "ma_inver": "N",
+   "ma_arret": "N",
+   "is_overtime": "N",
+   "date": "2027-06-05T00:00:00+00:00",
+   "time": "19H30",
+   "initial_date": null,
+   "cr_eq_naff": null,
+   "home_resu": "",
+   "cr_nb_but": null,
+   "home_score": null,
+   "home_but_contre": null,
+   "home_nb_point": null,
+   "home_nb_tir_but": null,
+   "home_nb_point_pena": null,
+   "home_is_forfeit": "N",
+   "cv_eq_naff": null,
+   "away_resu": "",
+   "away_nb_but": null,
+   "away_score": null,
+   "away_but_contre": null,
+   "away_nb_point": null,
+   "away_nb_tir_but": null,
+   "away_nb_point_pena": null,
+   "away_is_forfeit": "N",
+   "seems_postponed": "",
+   "match_feuille": null,
+   "external_updated_at": "2026-08-27T16:42:45+00:00",
+   "status_label": "/"
+  },
+  {
+   "ma_no": 56174369,
+   "competition": {
+    "cp_no": 450652,
+    "season": 2026,
+    "type": "CH",
+    "name": "District 1 Alsace",
+    "level": "D",
+    "cdg": {
+     "cg_no": 2,
+     "name": "DISTRICT D'ALSACE",
+     "external_updated_at": "2026-10-29T16:05:35+00:00"
+    },
+    "external_updated_at": "2026-08-27T17:54:01+00:00"
+   },
+   "phase": {
+    "number": 1,
+    "type": "CH",
+    "name": "Phase 1",
+    "external_updated_at": "2026-08-26T14:30:43+00:00"
+   },
+   "poule": {
+    "stage_number": 2,
+    "name": "POULE B",
+    "external_updated_at": "2026-08-27T12:07:03+00:00",
+    "poule_unique": false,
+    "at_least_one_match_resultat": true
+   },
+   "poule_journee": {
+    "number": 12,
+    "external_updated_at": "2026-08-27T12:20:29+00:00",
+    "name": "12"
+   },
+   "home": {
+    "club": {
+     "cl_no": 2131,
+     "external_updated_at": "2026-10-23T21:55:49+00:00",
+     "logo": "http://dofa-mock/phlogos/BC504189.jpg"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "ROESCHWOOG S.C",
+    "short_name_ligue": "ROESCHWOOG SC",
+    "short_name_federation": "ROESCHWOOG SC",
+    "type": "C",
+    "engagements": [
+     {
+      "competition": {
+       "cp_no": 449168,
+       "season": 2026,
+       "type": "CP",
+       "name": "COUPE DE FRANCE CRÉDIT AGRICOLE",
+       "level": "F",
+       "cdg": {
+        "cg_no": 0,
+        "name": "FEDERATION FRANCAISE DE FOOTBALL",
+        "external_updated_at": "2026-11-02T19:26:31+00:00"
+       },
+       "external_updated_at": "2026-10-29T11:40:48+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 450652,
+       "season": 2026,
+       "type": "CH",
+       "name": "District 1 Alsace",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-08-27T17:54:01+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458091,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe d'Alsace Intermarché",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:43+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458688,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe Crédit Mutuel Wissembourg",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:44+00:00"
+      }
+     }
+    ],
+    "external_updated_at": "2026-08-27T14:21:18+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "away": {
+    "club": {
+     "cl_no": 6441,
+     "external_updated_at": "2026-08-24T12:32:43+00:00",
+     "logo": "http://dofa-mock/phlogos/BC519635.jpg"
+    },
+    "category_code": "SEM",
+    "number": 1,
+    "code": 1,
+    "short_name": "MOTHERN F.C",
+    "short_name_ligue": "MOTHERN FC",
+    "short_name_federation": "MOTHERN FC",
+    "type": "C",
+    "engagements": [
+     {
+      "competition": {
+       "cp_no": 449168,
+       "season": 2026,
+       "type": "CP",
+       "name": "COUPE DE FRANCE CRÉDIT AGRICOLE",
+       "level": "F",
+       "cdg": {
+        "cg_no": 0,
+        "name": "FEDERATION FRANCAISE DE FOOTBALL",
+        "external_updated_at": "2026-11-02T19:26:31+00:00"
+       },
+       "external_updated_at": "2026-10-29T11:40:48+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 452004,
+       "season": 2026,
+       "type": "AC",
+       "name": "MATCHS AMICAUX",
+       "level": "L",
+       "cdg": {
+        "cg_no": 62,
+        "name": "LIGUE DU GRAND EST DE FOOTBALL",
+        "external_updated_at": "2026-10-28T18:34:34+00:00"
+       },
+       "external_updated_at": "2026-08-26T14:21:45+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 450652,
+       "season": 2026,
+       "type": "CH",
+       "name": "District 1 Alsace",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-08-27T17:54:01+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458091,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe d'Alsace Intermarché",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:43+00:00"
+      }
+     },
+     {
+      "competition": {
+       "cp_no": 458688,
+       "season": 2026,
+       "type": "CP",
+       "name": "Coupe Crédit Mutuel Wissembourg",
+       "level": "D",
+       "cdg": {
+        "cg_no": 2,
+        "name": "DISTRICT D'ALSACE",
+        "external_updated_at": "2026-10-29T16:05:35+00:00"
+       },
+       "external_updated_at": "2026-09-03T10:59:44+00:00"
+      }
+     }
+    ],
+    "external_updated_at": "2026-08-27T14:23:49+00:00",
+    "category_label": "Senior Libre",
+    "category_gender": "M"
+   },
+   "terrain": {
+    "te_no": 674050101,
+    "name": "STADE JEAN PIERRE 1",
+    "zip_code": "67480",
+    "city": "ROESCHWOOG",
+    "libelle_surface": "Pelouse Naturelle",
+    "external_updated_at": "2026-06-24T12:47:30+00:00",
+    "address": "RUE DU STADE"
+   },
+   "season": 2026,
+   "status": "A",
+   "ma_ar": "R",
+   "ma_inver": "N",
+   "ma_arret": "N",
+   "is_overtime": "N",
+   "date": "2027-06-06T00:00:00+00:00",
+   "time": "17H00",
+   "initial_date": null,
+   "cr_eq_naff": null,
+   "home_resu": "",
+   "cr_nb_but": null,
+   "home_score": null,
+   "home_but_contre": null,
+   "home_nb_point": null,
+   "home_nb_tir_but": null,
+   "home_nb_point_pena": null,
+   "home_is_forfeit": "N",
+   "cv_eq_naff": null,
+   "away_resu": "",
+   "away_nb_but": null,
+   "away_score": null,
+   "away_but_contre": null,
+   "away_nb_point": null,
+   "away_nb_tir_but": null,
+   "away_nb_point_pena": null,
+   "away_is_forfeit": "N",
+   "seems_postponed": "",
+   "match_feuille": null,
+   "external_updated_at": "2026-08-27T17:24:02+00:00",
+   "status_label": "/"
+  }
+ ],
+ "hydra:totalItems": 63,
+ "hydra:view": {
+  "@id": "/api/clubs/2131/matchs?page=3",
+  "@type": "hydra:PartialCollectionView",
+  "hydra:first": "/api/clubs/2131/matchs?page=1",
+  "hydra:last": "/api/clubs/2131/matchs?page=3",
+  "hydra:previous": "/api/clubs/2131/matchs?page=2"
+ },
+ "hydra:search": {
+  "@type": "hydra:IriTemplate",
+  "hydra:template": "/api/clubs/2131/matchs{?clNo,competition.cp_no,competition.cp_no[],ma_dat[before],ma_dat[strictly_before],ma_dat[after],ma_dat[strictly_after]}",
+  "hydra:variableRepresentation": "BasicRepresentation",
+  "hydra:mapping": [
+   {
+    "@type": "IriTemplateMapping",
+    "variable": "clNo",
+    "property": "clNo",
+    "required": false
+   },
+   {
+    "@type": "IriTemplateMapping",
+    "variable": "competition.cp_no",
+    "property": "competition.cp_no",
+    "required": false
+   },
+   {
+    "@type": "IriTemplateMapping",
+    "variable": "competition.cp_no[]",
+    "property": "competition.cp_no",
+    "required": false
+   },
+   {
+    "@type": "IriTemplateMapping",
+    "variable": "ma_dat[before]",
+    "property": "ma_dat",
+    "required": false
+   },
+   {
+    "@type": "IriTemplateMapping",
+    "variable": "ma_dat[strictly_before]",
+    "property": "ma_dat",
+    "required": false
+   },
+   {
+    "@type": "IriTemplateMapping",
+    "variable": "ma_dat[after]",
+    "property": "ma_dat",
+    "required": false
+   },
+   {
+    "@type": "IriTemplateMapping",
+    "variable": "ma_dat[strictly_after]",
+    "property": "ma_dat",
+    "required": false
+   }
+  ]
+ }
+}

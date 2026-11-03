@@ -13,7 +13,7 @@ function Resultat({ r, index, retournee, logoScr }) {
   const scrDomicile = r.domicile;
   const aTab = r.tab_domicile != null && r.tab_exterieur != null;
   const score = `${r.equipe_domicile} ${r.score_domicile}, ${r.equipe_exterieur} ${r.score_exterieur}`;
-  const logoAdv = logoPastille({ mini: r.logo_adversaire_mini, logo: r.logo_adversaire });
+  const logoAdv = logoPastille({ mini: r.logo_adversaire_mini, logo: r.logo_adversaire, fff: r.logo_adversaire_fff });
   const nom = (texte, scr) => (
     <span className={`acc-resultat-nom${scr ? ' acc-scr' : ''}`}>
       <Pastille src={scr ? logoScr : logoAdv} taille={22} />

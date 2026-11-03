@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getButeursParEquipe, API_BASE_URL } from '../services/api';
+import { getButeursParEquipe, urlImage } from '../services/api';
 
 const TEAMS = [
   { name: 'SCR 1', accent: '#51946a' },
@@ -34,7 +34,7 @@ function EquipeButeurs({ team, rows }) {
             </span>
             {row.joueur_photo ? (
               <img
-                src={`${API_BASE_URL}${row.joueur_photo}`}
+                src={urlImage(row.joueur_photo)}
                 alt=""
                 style={{ width: 24, height: 24, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--border)', flexShrink: 0 }}
               />

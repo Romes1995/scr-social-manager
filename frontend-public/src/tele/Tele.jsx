@@ -82,13 +82,13 @@ function precharger(urls) {
 }
 
 function imagesDesDonnees(data) {
-  const logoScr = logoPastille({ mini: data.club?.logo_mini, logo: data.club?.logo });
+  const logoScr = logoPastille({ mini: data.club?.logo_mini, logo: data.club?.logo, fff: data.club?.logo_fff });
   const logos = [
     logoScr,
-    ...data.prochains.map(p => logoPastille({ mini: p.logo_adversaire_mini, logo: p.logo_adversaire })),
+    ...data.prochains.map(p => logoPastille({ mini: p.logo_adversaire_mini, logo: p.logo_adversaire, fff: p.logo_adversaire_fff })),
     ...data.equipes.flatMap(e => [
-      ...e.resultats.map(r => logoPastille({ mini: r.logo_adversaire_mini, logo: r.logo_adversaire })),
-      ...(e.classement?.lignes || []).map(l => logoPastille({ mini: l.logo_mini, logo: l.logo })),
+      ...e.resultats.map(r => logoPastille({ mini: r.logo_adversaire_mini, logo: r.logo_adversaire, fff: r.logo_adversaire_fff })),
+      ...(e.classement?.lignes || []).map(l => logoPastille({ mini: l.logo_mini, logo: l.logo, fff: l.logo_fff })),
     ]),
   ];
   return logos;
@@ -230,7 +230,7 @@ const delaiPalette = (ligne, palette) => 0.25 + 0.3 * ligne + 0.15 * palette;
 
 function ResultatTele({ r, index, retournee, logoScr }) {
   const issue = ISSUES_TELE[r.issue];
-  const logoAdv = logoPastille({ mini: r.logo_adversaire_mini, logo: r.logo_adversaire });
+  const logoAdv = logoPastille({ mini: r.logo_adversaire_mini, logo: r.logo_adversaire, fff: r.logo_adversaire_fff });
   const aTab = r.tab_domicile != null && r.tab_exterieur != null;
   const ligne = (nom, scr, score, palette) => (
     <>
@@ -321,7 +321,7 @@ function ColonneClassement({ equipe, classement, echelle }) {
               <div key={`${l.rang}-${l.club}-${l.club_equipe_no}`} role="row" className={`tv-cl-ligne${l.is_scr ? ' tv-cl-scr' : ''}`}>
                 <span role="cell" className="tv-cl-rang">{l.rang}</span>
                 <span role="cell" className="tv-cl-club">
-                  <Pastille src={logoPastille({ mini: l.logo_mini, logo: l.logo })} taille={26} bordure={!l.is_scr} lazy={false} />
+                  <Pastille src={logoPastille({ mini: l.logo_mini, logo: l.logo, fff: l.logo_fff })} taille={26} bordure={!l.is_scr} lazy={false} />
                   <span className="tv-cl-club-nom">{l.nom_affiche}</span>
                 </span>
                 <span role="cell" className="tv-cl-num">{l.joues}</span>
@@ -366,7 +366,7 @@ export default function Tele() {
   }, [nbEcrans, duree]);
 
   const active = nbEcrans ? rotation.active % nbEcrans : 0;
-  const logoScr = data ? logoPastille({ mini: data.club?.logo_mini, logo: data.club?.logo }) : null;
+  const logoScr = data ? logoPastille({ mini: data.club?.logo_mini, logo: data.club?.logo, fff: data.club?.logo_fff }) : null;
 
   return (
     <div className="tv">

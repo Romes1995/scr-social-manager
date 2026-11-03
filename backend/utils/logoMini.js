@@ -16,7 +16,7 @@ const fs    = require('fs');
 const path  = require('path');
 const sharp = require('sharp');
 
-const UPLOADS  = path.join(__dirname, '..', 'uploads');
+const { UPLOADS_DIR: UPLOADS } = require('../config/uploads');
 const MINI_DIR = path.join(UPLOADS, 'logos', 'mini');
 const TAILLE   = 64;
 

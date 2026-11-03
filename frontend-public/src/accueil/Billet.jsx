@@ -75,7 +75,7 @@ export default function Billet({ match, logoScr, tailles = TAILLES_ACCUEIL, inte
   const domicile = match.domicile;
 
   const lieu = domicile ? 'Voir le stade' : ville ? `Itinéraire, ${ville}` : 'Itinéraire';
-  const logoAdv = logoPastille({ mini: match.logo_adversaire_mini, logo: match.logo_adversaire });
+  const logoAdv = logoPastille({ mini: match.logo_adversaire_mini, logo: match.logo_adversaire, fff: match.logo_adversaire_fff });
   const resume = `${libelleEquipe(match.equipe)} : ${match.equipe_domicile} reçoit ${match.equipe_exterieur} ` +
     `(${domicile ? 'à domicile' : 'à l\'extérieur'}), ` +
     `${dateLongue(match.date)}${match.reporte ? ', match reporté' : heure ? ` à ${heure.h} h ${heure.m}` : ''}`;

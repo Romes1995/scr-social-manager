@@ -10,6 +10,10 @@ backend/.env
 backend/.env.*
 frontend/.env
 frontend/.env.local
+# Tous les .env.* (dont .env.development), sauf les modèles *.example
+.env.*
+!.env.example
+!.env.*.example
 
 # Uploads (fichiers générés)
 backend/uploads/*

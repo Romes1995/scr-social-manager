@@ -10,7 +10,7 @@ function Ligne({ l }) {
     <div role="row" className={`acc-cl-ligne${l.is_scr ? ' acc-cl-scr' : ''}`}>
       <span role="cell" className="acc-cl-rang">{l.rang}</span>
       <span role="cell" className="acc-cl-club" title={l.nom_affiche}>
-        <Pastille src={logoPastille({ mini: l.logo_mini, logo: l.logo })} taille={20} bordure={!l.is_scr} />
+        <Pastille src={logoPastille({ mini: l.logo_mini, logo: l.logo, fff: l.logo_fff })} taille={20} bordure={!l.is_scr} />
         <span className="acc-cl-club-nom">{l.nom_affiche}</span>
       </span>
       <span role="cell" className="acc-cl-num">{l.joues}</span>
